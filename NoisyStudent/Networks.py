@@ -79,11 +79,11 @@ class Network():
     def history(self):
         return self.hist
 
-    def save(self, path):
-        self.net.save(dirpath + path + '.h5')
+    #def save(self, path):
+    #    self.net.save(dirpath + path + '.h5')
 
-    def load(self, path):
-        self.Net = tf.keras.models.load_model(dirpath + path + '.h5')
+    #def load(self, path):
+    #    self.Net = tf.keras.models.load_model(dirpath + path + '.h5')
 
     def save(self, path):
         f = open(dirpath + path + '.pickle', 'wb')
@@ -97,4 +97,4 @@ class Network():
         f.close()
         self.Net.load_weights(dirpath + path + '.h5')
 
-        self.curr_epoch = self.hist['iterations'][-1]
+        self.curr_epoch = self.hist['iterations'][0][-1]
