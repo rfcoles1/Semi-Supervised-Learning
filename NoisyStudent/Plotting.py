@@ -18,10 +18,8 @@ def plot_results(results, labels, lim=[150,2,1]):
     fig = plt.figure(figsize=(12,8))
     grid = gs.GridSpec(1,2, wspace=0.05)
     
-
     ax0 = fig.add_subplot(grid[0])
     ax1 = fig.add_subplot(grid[1])
-    
     
     for result,label in zip(results,labels):
         iters = np.concatenate(result['iterations'])
@@ -29,7 +27,6 @@ def plot_results(results, labels, lim=[150,2,1]):
         acc = np.concatenate(result['test_acc'])
         ax0.plot(iters,loss, label=label)        
         ax1.plot(iters,acc, label=label)
-
 
     ax0.set_ylabel('Loss')
     ax0.set_xlabel('Epochs')
@@ -45,4 +42,3 @@ def plot_results(results, labels, lim=[150,2,1]):
     ax1.yaxis.set_label_position('right')
     ax1.grid()
     ax1.legend()
-
