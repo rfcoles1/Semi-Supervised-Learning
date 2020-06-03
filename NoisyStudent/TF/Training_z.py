@@ -13,14 +13,14 @@ dataset_loader = torch.utils.data.DataLoader(Dynamic_dataloader_subaru_params(\
     batch_size=10000, shuffle=True, num_workers=1, pin_memory=True)
 
 img,z,sigma = next(iter(dataset_loader))
-img = np.transpose(img.numpy(),(0,3,1,2)
+img = np.transpose(img.numpy(),(0,3,1,2))
 params = np.hstack(z.numpy(), sigma.numpy())
 
 x_train, x_test, y_train, y_test = train_test_split(img,params,test_size=0.2)
 
 def TrainTeacher(epochs, load = False):
    
-    Teacher_Net = Network_z(np.shape(x_train[0], 2, noise=False)
+    Teacher_Net = Network_z(np.shape(x_train[0]), 2, noise=False)
     if load:
         Teacher_Net.load(path=teach_path)
     Teacher_Net.train(x_train, y_train, x_test, y_test, epochs)
