@@ -1,5 +1,4 @@
-from Networks import *
-from Plotting import *
+from Network_MNIST import *
 
 import sys
 sys.path.insert(0, '../')
@@ -13,7 +12,7 @@ def TrainTeacher(trainsplit, epochs, teach_path, load = False):
     Data.reset()
     x_train, y_train = Data.get_train(trainsplit)
 
-    Teacher_Net = Network(Data.input_shape, Data.num_classes, noise=False)
+    Teacher_Net = Network_MNIST(Data.input_shape, Data.num_classes, noise=False)
     if load:
         Teacher_Net.load(path=teach_path)
     Teacher_Net.train(x_train, y_train, x_test, y_test, epochs)
@@ -21,7 +20,7 @@ def TrainTeacher(trainsplit, epochs, teach_path, load = False):
 
 
 def TrainStudent(trainsplit, epochs, teach_path, student_path, load = False):
-    Teacher_Net = Network(Data.input_shape, Data.num_classes, noise=False)
+    Teacher_Net = Network_MNIST(Data.input_shape, Data.num_classes, noise=False)
     Teacher_Net.load(path=teach_path)
 
     Data.reset()
@@ -32,7 +31,7 @@ def TrainStudent(trainsplit, epochs, teach_path, student_path, load = False):
     x_train_new = np.concatenate([x_train,x_pred])
     y_train_new = np.concatenate([y_train,y_pred])
 
-    Student_Net = Network(Data.input_shape, Data.num_classes, noise=True)
+    Student_Net = Network_MNIST(Data.input_shape, Data.num_classes, noise=True)
     if load:
         Student_Net.load(path=student_path)
     Student_Net.train(x_train_new, y_train_new, x_test, y_test, epochs)
@@ -42,7 +41,7 @@ def TrainStudent(trainsplit, epochs, teach_path, student_path, load = False):
 def TrainStudent_Aug(trainsplit, epochs, teach_path, student_path, num_ops=2, load = False):
     Aug = Augmenter(num_ops)
 
-    Teacher_Net = Network(Data.input_shape, Data.num_classes, noise=False)
+    Teacher_Net = Network_MNIST(Data.input_shape, Data.num_classes, noise=False)
     Teacher_Net.load(path=teach_path)
 
     Data.reset()
@@ -67,7 +66,7 @@ def TrainStudent_Aug(trainsplit, epochs, teach_path, student_path, num_ops=2, lo
     x_train_new = np.concatenate([x_traini_aug,x_pred_aug])
     y_train_new = np.concatenate([y_train,y_pred])
 
-    Student_Net = Network(Data.input_shape, Data.num_classes, noise=True)
+    Student_Net = Network_MNIST(Data.input_shape, Data.num_classes, noise=True)
     if load:
         Student_Net.load(path=student_path)
     Student_Net.train(x_train_new, y_train_new, x_test, y_test, epochs)
