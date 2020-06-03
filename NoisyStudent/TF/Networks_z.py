@@ -50,9 +50,7 @@ class Network_z(Network):
     
         self.hist['iterations'].append(np.arange(self.curr_epoch,self.curr_epoch+epochs,verbose))
         self.hist['train_loss'].append(history.history['loss'])
-        self.hist['train_acc'].append(history.history['acc'])
         self.hist['test_loss'].append(history.history['val_loss'])
-        self.hist['test_acc'].append(history.history['val_acc'])
 
         self.curr_epoch += epochs
 
