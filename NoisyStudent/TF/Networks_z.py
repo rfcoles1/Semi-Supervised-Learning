@@ -1,10 +1,10 @@
 from Networks import *
 
-class Network_MNIST(Network):
-    def __init__(self, input_shape, num_out, noise=False):
+class Network_z(Network):
+    def __init__(self, input_shape, num_out=1, noise=False):
         super().__init__()
-        
-        self.batch_size = 128
+       
+        self.batch_size = 4
         self.input_shape = input_shape
         self.num_out = num_out
 
@@ -14,9 +14,8 @@ class Network_MNIST(Network):
         else:
             self.Net = tf.keras.models.Model(self.inp, self.CNN(self.inp))
         
-        self.Net.compile(loss=tf.keras.losses.categorical_crossentropy,
-              optimizer=tf.keras.optimizers.Adadelta(),
-              metrics=['accuracy'])
+        self.Net.compile(loss=tf.keras.losses.MSE,
+              optimizer=tf.keras.optimizers.Adadelta())
    
     def CNN(self, x):
         y = layers.Conv2D(32, (3, 3), activation='relu',\
@@ -25,7 +24,7 @@ class Network_MNIST(Network):
         y = layers.MaxPooling2D(pool_size=(2, 2))(y)
         y = layers.Flatten()(y)
         y = layers.Dense(128, activation='relu')(y)
-        y = layers.Dense(self.num_out, activation='softmax')(y)
+        y = layers.Dense(self.num_out)(y)
         return y
     
     def CNN_noise(self, x):
@@ -37,7 +36,7 @@ class Network_MNIST(Network):
         y = layers.Flatten()(y)
         y = layers.Dense(128, activation='relu')(y)
         y = layers.Dropout(0.5)(y)
-        y = layers.Dense(self.num_out, activation='softmax')(y)
+        y = layers.Dense(self.num_out)(y)
         return y
 
 
