@@ -15,15 +15,15 @@ class Network_z(Network):
             self.Net = tf.keras.models.Model(self.inp, self.CNN(self.inp))
         
         self.Net.compile(loss=tf.keras.losses.MSE,
-              optimizer=tf.keras.optimizers.Adadelta())
+              optimizer=tf.keras.optimizers.Adadelta(learning_rate=self.lr))
    
     def CNN(self, x):
-        y = layers.Conv2D(32, (3, 3), activation='relu',\
+        y = layers.Conv2D(128, (4, 4), activation='relu',\
                          input_shape=self.input_shape)(x)
-        y = layers.Conv2D(64, (3, 3), activation='relu')(y)
-        y = layers.MaxPooling2D(pool_size=(2, 2))(y)
+        y = layers.Conv2D(256, (4, 4), activation='relu')(y)
+        #y = layers.MaxPooling2D(pool_size=(2, 2))(y)
         y = layers.Flatten()(y)
-        y = layers.Dense(128, activation='relu')(y)
+        y = layers.Dense(1024, activation='relu')(y)
         y = layers.Dense(self.num_out)(y)
         return y
     
