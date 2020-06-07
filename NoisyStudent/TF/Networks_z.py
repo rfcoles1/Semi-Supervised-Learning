@@ -1,15 +1,19 @@
 from Networks import *
 
 def abs_bias_loss(y_true, y_pred):
-    return np.mean(abs((y_true - y_pred)/(1 + y_true)
+    loss = tf.reduce_mean(abs(y_true - y_pred))/(1 + y_true)
+    return loss 
 
 def MAD_loss(y_true, y_pred):
     resid = (y_true - y_pred)/(1 + y_true)
-    return 1.4826 * np.mean(abs(resid - np.mean(resid)))
+    median = tf.contrib.distributions.percentile(resid,50.)
+    loss = tf.reduce_mean(abs(resid - median))
+    return loss
 
 def bias_MAD_loss(y_true, y_pred):
     resid = (y_true - y_pred)/(1 + y_true)
-    return np.sqrt(np.mean(np.abs(resid))) + 1.4826 * (np.mean(np.abs(resid=np.median(resid))))
+    median = tf.contrib.distributions.percentile(resid,50.)
+    return tf.sqrt(tf.reduce_mean(abs(resid))) + 1.4826 * (tf.reduce_mean(abs(resid - median)))
 
 
 
