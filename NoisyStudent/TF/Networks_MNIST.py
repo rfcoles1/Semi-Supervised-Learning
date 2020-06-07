@@ -3,6 +3,8 @@ from Networks import *
 class Network_MNIST(Network):
     def __init__(self, input_shape, num_out, noise=False):
         super().__init__()
+
+        self.dirpath = 'records_MNIST/'
         
         self.batch_size = 128
         self.input_shape = input_shape
@@ -15,7 +17,7 @@ class Network_MNIST(Network):
             self.Net = tf.keras.models.Model(self.inp, self.CNN(self.inp))
         
         self.Net.compile(loss=tf.keras.losses.categorical_crossentropy,
-              optimizer=tf.keras.optimizers.Adadelta(),
+              optimizer=tf.keras.optimizers.Adadelta(learning_rate=self.lr),
               metrics=['accuracy'])
    
     def CNN(self, x):
