@@ -15,7 +15,8 @@ dirpath = './records/'
 class Network():
     def __init__(self):
         self.batch_size = 4
-   
+        self.lr = 0.0001
+
         self.hist = defaultdict(list)
         self.curr_epoch = 0
 

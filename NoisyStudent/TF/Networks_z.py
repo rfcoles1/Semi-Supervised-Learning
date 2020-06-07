@@ -1,5 +1,18 @@
 from Networks import *
 
+def abs_bias_loss(y_true, y_pred):
+    return np.mean(abs((y_true - y_pred)/(1 + y_true)
+
+def MAD_loss(y_true, y_pred):
+    resid = (y_true - y_pred)/(1 + y_true)
+    return 1.4826 * np.mean(abs(resid - np.mean(resid)))
+
+def bias_MAD_loss(y_true, y_pred):
+    resid = (y_true - y_pred)/(1 + y_true)
+    return np.sqrt(np.mean(np.abs(resid))) + 1.4826 * (np.mean(np.abs(resid=np.median(resid))))
+
+
+
 class Network_z(Network):
     def __init__(self, input_shape, num_out=1, noise=False):
         super().__init__()
@@ -15,7 +28,8 @@ class Network_z(Network):
             self.Net = tf.keras.models.Model(self.inp, self.CNN(self.inp))
         
         self.Net.compile(loss=tf.keras.losses.MSE,
-              optimizer=tf.keras.optimizers.Adadelta(learning_rate=self.lr))
+              optimizer=tf.keras.optimizers.Adadelta(learning_rate=self.lr),
+              metrics = [abs_bias_loss, MAD_loss, bias_MAD_loss])
    
     def CNN(self, x):
         y = layers.Conv2D(128, (4, 4), activation='relu',\

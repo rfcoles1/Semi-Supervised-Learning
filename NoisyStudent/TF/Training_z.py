@@ -24,7 +24,7 @@ def TrainTeacher(epochs,teach_path = './records/test', load = False):
     Teacher_Net = Network_z(np.shape(x_train[0]), 1, noise=False)
     if load:
         Teacher_Net.load(path=teach_path)
-    Teacher_Net.train(x_train, y_train, x_test, y_test, epochs)
+    Teacher_Net.train(x_train, y_train, x_test, y_test, epochs, verbose=2)
     Teacher_Net.save(path=teach_path)
 
 
