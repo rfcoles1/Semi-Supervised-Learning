@@ -5,7 +5,9 @@ class Network_MNIST(Network):
         super().__init__()
 
         self.dirpath = 'records_MNIST/'
-        
+        if not os.path.exists(self.dirpath):
+            os.makedirs(self.dirpath)
+
         self.batch_size = 128
         self.input_shape = input_shape
         self.num_out = num_out

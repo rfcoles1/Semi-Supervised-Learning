@@ -23,6 +23,8 @@ class Network_z(Network):
         super().__init__()
   
         self.dirpath = 'records_z/'
+        if not os.path.exists(self.dirpath):
+            os.makedirs(self.dirpath)
 
         self.batch_size = 16
         self.input_shape = input_shape
