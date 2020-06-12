@@ -53,7 +53,7 @@ class Network_MNIST(Network):
                  verbose=verbose,
                  validation_data=(x_test, y_test))
     
-        epochs = np.arange(self.curr_epoch, self.curr_epoch+epochs,1))
+        epochs = np.arange(self.curr_epoch, self.curr_epoch+epochs,1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
 
         self.hist['epochs'].append(epochs)
