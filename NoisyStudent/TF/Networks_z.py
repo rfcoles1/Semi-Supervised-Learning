@@ -71,11 +71,11 @@ class Network_z(Network):
                  verbose=verbose,
                  validation_data=(x_test, y_test))
         
-        epochs = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
+        epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
         
-        self.hist['epochs'].append(epochs)
-        self.hist['iterations'].append(epochs*iterations)
+        self.hist['epochs'].append(epochs_arr)
+        self.hist['iterations'].append(epochs_arr*iterations)
         self.hist['train_mse'].append(history.history['loss'])
         self.hist['train_abs_bias'].append(history.history['abs_bias_loss'])
         self.hist['train_MAD_loss'].append(history.history['MAD_loss'])
