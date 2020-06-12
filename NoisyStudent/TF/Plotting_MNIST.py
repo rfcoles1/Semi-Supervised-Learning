@@ -14,7 +14,7 @@ plt.rc('axes', labelsize=smol)
 plt.rc('xtick', labelsize=smol)
 plt.rc('ytick', labelsize=smol)
 
-def plot_results(results, labels, lim=[150,2,1]):
+def plot_results(results, labels, lim=[250,3,1]):
     fig = plt.figure(figsize=(12,8))
     grid = gs.GridSpec(1,2, wspace=0.05)
     
@@ -22,7 +22,7 @@ def plot_results(results, labels, lim=[150,2,1]):
     ax1 = fig.add_subplot(grid[1])
     
     for result,label in zip(results,labels):
-        iters = np.concatenate(result['iterations'])
+        iters = np.concatenate(result['epochs'])
         loss = np.concatenate(result['test_loss'])
         acc = np.concatenate(result['test_acc'])
         ax0.plot(iters,loss, label=label)        

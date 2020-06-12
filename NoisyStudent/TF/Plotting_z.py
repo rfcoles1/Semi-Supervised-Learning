@@ -22,7 +22,7 @@ def plot_loss(results, labels, lim=[100,3]):
     ax = fig.add_subplot(grid[0])
 
     for result, label in zip(results, labels):
-        iters = np.concatenate(result['iterations'])
+        iters = np.concatenate(result['epochs'])
         mse = np.concatenate(result['test_MSE'])
 
         ax.plot(iters, mse,label=label)
@@ -44,7 +44,7 @@ def plot_metrics(results, labels, lim=[100,3,1,1,2]):
     ax3 = fig.add_subplot(grid[3])
 
     for result, label in zip(results, labels):
-        iters = np.concatenate(result['iterations'])
+        iters = np.concatenate(result['epochs'])
         mse = np.concatenate(result['test_MSE'])
         bias = np.concatenate(result['test_abs_bias'])
         MAD = np.concatenate(result['test_MAD_loss'])

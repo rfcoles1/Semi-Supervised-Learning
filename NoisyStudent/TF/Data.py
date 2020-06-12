@@ -8,63 +8,74 @@ seed = 0
 np.random.seed(seed)
 
 def get_mnist():
-    from tensorflow.keras.datasets import mnist
-    from tensorflow.keras import backend as K
+    try:
+        from tensorflow.keras.datasets import mnist
+        from tensorflow.keras import backend as K
     
-    img_rows, img_cols = 28, 28
-    num_classes = 10
+        img_rows, img_cols = 28, 28
+        num_classes = 10
 
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+        (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-    x = np.concatenate((x_train, x_test))
-    y = np.concatenate((y_train, y_test), axis=0 )
+        x = np.concatenate((x_train, x_test))
+        y = np.concatenate((y_train, y_test), axis=0 )
 
-    if K.image_data_format() == 'channels_first':
-        x = x.reshape(x.shape[0], 1, img_rows, img_cols)
-        input_shape = (1, img_rows, img_cols)
-    else:
-        x = x.reshape(x.shape[0], img_rows, img_cols, 1)
-        input_shape = (img_rows, img_cols, 1)
+        if K.image_data_format() == 'channels_first':
+            x = x.reshape(x.shape[0], 1, img_rows, img_cols)
+            input_shape = (1, img_rows, img_cols)
+        else:
+            x = x.reshape(x.shape[0], img_rows, img_cols, 1)
+            input_shape = (img_rows, img_cols, 1)
 
-    x = x.astype('float32')
-    x /= 255
+        x = x.astype('float32')
+        x /= 255
 
-    y = tf.keras.utils.to_categorical(y, num_classes)
+        y = tf.keras.utils.to_categorical(y, num_classes)
 
-    return x, y, input_shape, num_classes
+        return x, y, input_shape, num_classes
+    except:
+        print("Could not generate data")
+
 
 def get_z_dataset(N = 1000, sigma=False):
-    from dynamicDataLoader import Dynamic_dataloader_subaru_params
+    try:
+        from dynamicDataLoader import Dynamic_dataloader_subaru_params
 
-    dataset_loader = torch.utils.data.DataLoader(Dynamic_dataloader_subaru_params(\
-        transforms.Normalize(mean=(0.0598,0.0123,0.0207,0.0311,0.0403),\
-        std=(1.01,0.0909,0.193,0.357,0.552)),cut_size=16), \
-        batch_size=N, shuffle=True, num_workers=1, pin_memory=True)
+        dataset_loader = torch.utils.data.DataLoader(Dynamic_dataloader_subaru_params(\
+            transforms.Normalize(mean=(0.0598,0.0123,0.0207,0.0311,0.0403),\
+            std=(1.01,0.0909,0.193,0.357,0.552)),cut_size=16), \
+            batch_size=N, shuffle=True, num_workers=1, pin_memory=True)
 
-    img,z,sigma = next(iter(dataset_loader))
-    img = np.transpose(img.numpy(),(0,3,1,2))
+        img,z,sigma = next(iter(dataset_loader))
+        img = np.transpose(img.numpy(),(0,3,1,2))
     
-    if sigma:
-        params = np.hstack([z.numpy(), sigma.numpy()])
-        out_size = 2
-    else:
-        params = z.numpy()
-        out_size = 1
+        if sigma:
+            params = np.hstack([z.numpy(), sigma.numpy()])
+            out_size = 2
+        else:
+            params = z.numpy()
+            out_size = 1
 
-    return img, params, np.shape(img[0]), out_size
+        return img, params, np.shape(img[0]), out_size
+    except:
+        print("Could not generate data")
+
 
 def load_z_dataset():
-    import pickle
-    img, params = pickle.load(open("data.pickle","rb"))
-    out_size = 1
-    return img, params, np.shape(img[0]), out_size 
+    try:
+        import pickle
+        img, params = pickle.load(open("data.pickle","rb"))
+        out_size = 1
+        return img, params, np.shape(img[0]), out_size 
+    except:
+        print("Could not load data")
 
 class Loader():
     def __init__(self, test_per, dat):
         
         self.datasets = {
             "MNIST": get_mnist(),
-            #"get_z": get_z_dataset(),
+            "get_z": get_z_dataset(),
             "load_z": load_z_dataset()}
 
         x, y, self.input_shape, self.num_classes = self.datasets[dat]
