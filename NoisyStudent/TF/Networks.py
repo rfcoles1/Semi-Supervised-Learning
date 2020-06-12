@@ -43,4 +43,4 @@ class Network():
         f.close()
         self.Net.load_weights(self.dirpath + path + '.h5')
 
-        self.curr_epoch = self.hist['iterations'][0][-1]
+        self.curr_epoch = self.hist['iterations'][-1][-1]

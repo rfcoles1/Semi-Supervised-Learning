@@ -63,7 +63,7 @@ class Network_z(Network):
         return y
 
 
-    def train(self, x_train, y_train, x_test, y_test, epochs, verbose=1):
+    def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
      
         history = self.Net.fit(x_train, y_train, 
                  batch_size=self.batch_size, 
@@ -71,7 +71,11 @@ class Network_z(Network):
                  verbose=verbose,
                  validation_data=(x_test, y_test))
         
-        self.hist['iterations'].append(np.arange(self.curr_epoch,self.curr_epoch+epochs,verbose))
+        epochs = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1))
+        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
+        
+        self.hist['epochs'].append(epochs)
+        self.hist['iterations'].append(epochs*iterations)
         self.hist['train_mse'].append(history.history['loss'])
         self.hist['train_abs_bias'].append(history.history['abs_bias_loss'])
         self.hist['train_MAD_loss'].append(history.history['MAD_loss'])

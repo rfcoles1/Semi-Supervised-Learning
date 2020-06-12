@@ -53,11 +53,15 @@ class Network_MNIST(Network):
                  verbose=verbose,
                  validation_data=(x_test, y_test))
     
-        self.hist['iterations'].append(np.arange(self.curr_epoch,self.curr_epoch+epochs,verbose))
+        self.hist['epochs'].append(np.arange(self.curr_epoch,self.curr_epoch+epochs,verbose))
         self.hist['train_loss'].append(history.history['loss'])
-        self.hist['train_acc'].append(history.history['acc'])
         self.hist['test_loss'].append(history.history['val_loss'])
-        self.hist['test_acc'].append(history.history['val_acc'])
-
+        try:
+            self.hist['train_acc'].append(history.history['accuracy'])
+            self.hist['test_acc'].append(history.history['val_accuracy'])
+        except:
+            self.hist['train_acc'].append(history.history['acc'])
+            self.hist['test_acc'].append(history.history['val_acc'])
+        
         self.curr_epoch += epochs
-
+        
