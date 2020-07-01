@@ -42,5 +42,4 @@ class Network():
         self.hist = pickle.load(f)
         f.close()
         self.Net.load_weights(self.dirpath + path + '.h5')
-
-        self.curr_epoch = self.hist['iterations'][-1][-1]
+        self.curr_epoch = self.hist['epochs'][-1][-1]

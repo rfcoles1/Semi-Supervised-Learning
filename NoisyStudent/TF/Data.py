@@ -66,7 +66,37 @@ def load_z_dataset():
         import pickle
         img, params = pickle.load(open("data.pickle","rb"))
         out_size = 1
+        """ 
+        idx = [i for i, params in enumerate(params) if params > 3.5]
+        img = np.delete(img, idx,axis=0)
+        params = np.delete(params, idx)
+        
+        idx = [i for i, params in enumerate(params) if params < 0.5]
+        img = np.delete(img, idx,axis=0)
+        params = np.delete(params, idx)
+
+        n, bin_edges = np.histogram(params,20)
+        idxs = np.digitize(params, bin_edges)-1
+        new_imgs = [] 
+        new_params = []
+        for j in range(len(n)):
+            idx = [ix for ix, i in enumerate(idxs) if i==j]
+            if n[j] > 500:
+                idx = np.random.choice(idx, 500, replace=False)
+                new_imgs.append(img[idx,:,:,:])
+                new_params.append(params[idx])
+            else:
+                idx = np.hstack([idx, np.random.choice(idx,500-n[j])])
+                new_imgs.append(img[idx,:,:,:])
+                new_params.append(params[idx])
+                 
+        img = [item for sublist in new_imgs for item in sublist]
+        img = np.array(img)
+        params = [item for sublist in new_params for item in sublist]
+        params = np.array(params)
+        """
         return img, params, np.shape(img[0]), out_size 
+    
     except:
         print("Could not load data")
 
@@ -78,7 +108,21 @@ class Loader():
             "get_z": get_z_dataset(),
             "load_z": load_z_dataset()}
 
-        x, y, self.input_shape, self.num_classes = self.datasets[dat]
+        x, y, self.input_shape, self.num_out = self.datasets[dat]
+        
+        dims = self.input_shape[-1]
+        self.x_min = np.zeros(dims)
+        self.x_max = np.zeros(dims)
+        #TODO can probably remove the loop
+        for i in range(dims):
+            self.x_min[i] = np.min(x[:,:,:,i])
+            self.x_max[i] = np.max(x[:,:,:,i])
+            x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
+        
+        if dat != "MNIST":
+            self.y_min = np.min(y)
+            self.y_max = np.max(y)
+            y = (y-self.y_min)/(self.y_max-self.y_min)
 
         self.test_per = test_per
         self.x_train, self.x_test, self.y_train, self.y_test = \
