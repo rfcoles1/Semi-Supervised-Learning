@@ -192,6 +192,12 @@ class Augmenter():
         return x
 
 
+    def transform_set(self, x):
+        x_aug = np.zeros_like(x)
+        for i in range(len(x)):
+            x_aug[i] = self.transform(x[i])
+        return x_aug
+
     def transform(self, x):
         operations = self.get_transforms()
         for (op, m) in operations:
