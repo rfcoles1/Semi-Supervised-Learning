@@ -82,7 +82,7 @@ class CustomAugment(object):
 
 
 class Network():
-    def __init__(self, input_shape, noise=False):
+    def __init__(self, input_shape, tfres=True, noise=False):
         
         self.dirpath = 'records_z/'
         if not os.path.exists(self.dirpath):
@@ -104,7 +104,10 @@ class Network():
 
         self.inp1 = layers.Input(input_shape)      
         self.inp2 = layers.Input(self.z_size)
-        self.ResNet = tf.keras.models.Model(self.inp1, self.resnet(self.inp1))
+        if tfres == True:
+            self.ResNet = tf.keras.models.Model(self.inp1, self.tf_resnet(self.inp1))
+        else:    
+            self.ResNet = tf.keras.models.Model(self.inp1, self.resnet(self.inp1))
         self.Mlp = tf.keras.models.Model(self.inp2, self.mlp(self.inp2))
         self.SimClr = tf.keras.models.Model(self.inp1, self.mlp(self.resnet(self.inp1)))
 
@@ -118,6 +121,21 @@ class Network():
         self.Mlp.compile(loss=tf.keras.losses.MSE,
             optimizer=tf.keras.optimizers.Adam(learning_rate=self.lr))
 
+    def tf_resnet(self,x):
+        base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
+            input_shape=self.input_shape)
+        base_model.trainabe = True
+        inputs = layers.Input((32,32,5))
+        h = base_model(x, training=True)
+        h = layers.GlobalAveragePooling2D()(h)
+
+        projection_1 = layers.Dense(256,activation='relu')(h)
+        projection_2 = layers.Dense(128,activation='relu')(projection_1)
+        projection_3 = layers.Dense(50)(projection_2)
+
+        return projection_3
+    
+    
     def resnet(self,x):
         x = layers.Conv2D(32, kernel_size=(3,3), padding='same')(x)
         x = _add_common_layers(x)
@@ -167,7 +185,7 @@ class Network():
                 x_train_j = self.data_aug(batch_x)
                 
                 loss = self._train_step(x_train_i, x_train_j)
-                
+                 
                 batch_losses[i] = loss
             
             epoch_losses[it%self.chkpt] = np.mean(batch_losses) 
@@ -183,9 +201,11 @@ class Network():
 
     def _train_step(self, x_train_i, x_train_j):
         with tf.GradientTape() as tape:
-
+            print('\n\n\n')
             zi = self.ResNet(x_train_i)
             zj = self.ResNet(x_train_j)
+
+            print(zi,zj)
 
             zi = tf.math.l2_normalize(zi, axis=1)
             zj = tf.math.l2_normalize(zj, axis=1)
@@ -193,8 +213,7 @@ class Network():
             l_pos = cos_sim_dim1(zi, zj)
             l_pos = tf.reshape(l_pos, (self.batch_size,1))
             l_pos /= self.temp
-            
-            
+            print(l_pos)
             negatives = tf.concat([zj, zi], axis=0)
             
             loss = 0
@@ -202,13 +221,14 @@ class Network():
                 
                 labels = tf.zeros(self.batch_size, dtype=tf.int32)
                 l_neg = cos_sim_dim2(positives, negatives)
+                print(l_neg)
                 l_neg = tf.boolean_mask(l_neg, self.negative_mask)
                 l_neg = tf.reshape(l_neg, (self.batch_size, -1))
                 l_neg /= self.temp
-                
                 logits = tf.concat([l_pos, l_neg], axis=1)
+                print(logits)
                 loss += self.criterion(y_pred=logits, y_true=labels)
-                    
+                print(loss)
             loss = loss/(2*self.batch_size)
 
             gradients = tape.gradient(loss, self.ResNet.trainable_variables)
