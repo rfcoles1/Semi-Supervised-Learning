@@ -201,11 +201,9 @@ class Network():
 
     def _train_step(self, x_train_i, x_train_j):
         with tf.GradientTape() as tape:
-            print('\n\n\n')
             zi = self.ResNet(x_train_i)
             zj = self.ResNet(x_train_j)
 
-            print(zi,zj)
 
             zi = tf.math.l2_normalize(zi, axis=1)
             zj = tf.math.l2_normalize(zj, axis=1)
@@ -213,7 +211,6 @@ class Network():
             l_pos = cos_sim_dim1(zi, zj)
             l_pos = tf.reshape(l_pos, (self.batch_size,1))
             l_pos /= self.temp
-            print(l_pos)
             negatives = tf.concat([zj, zi], axis=0)
             
             loss = 0
@@ -221,14 +218,12 @@ class Network():
                 
                 labels = tf.zeros(self.batch_size, dtype=tf.int32)
                 l_neg = cos_sim_dim2(positives, negatives)
-                print(l_neg)
                 l_neg = tf.boolean_mask(l_neg, self.negative_mask)
                 l_neg = tf.reshape(l_neg, (self.batch_size, -1))
                 l_neg /= self.temp
                 logits = tf.concat([l_pos, l_neg], axis=1)
-                print(logits)
+                
                 loss += self.criterion(y_pred=logits, y_true=labels)
-                print(loss)
             loss = loss/(2*self.batch_size)
 
             gradients = tape.gradient(loss, self.ResNet.trainable_variables)

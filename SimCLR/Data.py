@@ -20,12 +20,12 @@ def get_mnist():
         x = np.concatenate((x_train, x_test))
         y = np.concatenate((y_train, y_test), axis=0 )
 
-        if K.image_data_format() == 'channels_first':
-            x = x.reshape(x.shape[0], 1, img_rows, img_cols)
-            input_shape = (1, img_rows, img_cols)
-        else:
-            x = x.reshape(x.shape[0], img_rows, img_cols, 1)
-            input_shape = (img_rows, img_cols, 1)
+        #if K.image_data_format() == 'channels_first':
+        #    x = x.reshape(x.shape[0], 1, img_rows, img_cols)
+        #    input_shape = (1, img_rows, img_cols)
+        x = x.reshape(x.shape[0], img_rows, img_cols, 1)
+        x = np.pad(x, ((0,0),(2,2),(2,2),(0,0)), 'constant')
+        input_shape = (32, 32, 1)
 
         x = x.astype('float32')
         x /= 255
