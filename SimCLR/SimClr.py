@@ -11,11 +11,9 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras import layers as layers
 from tensorflow.keras import backend as K
+import tensorflow_probability as tfp
+
 import sklearn
-
-from Data import *
-
-#import tensorflow_probability as tfp
 
 def abs_bias_loss(y_true, y_pred):
     loss = tf.reduce_mean(abs(y_true - y_pred))/(1 + y_true)
@@ -23,14 +21,14 @@ def abs_bias_loss(y_true, y_pred):
 
 def MAD_loss(y_true, y_pred):
     resid = (y_true - y_pred)/(1 + y_true)
-    median = tf.contrib.distributions.percentile(resid,50.)
-    #median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
+    #median = tf.contrib.distributions.percentile(resid,50.)
+    median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
     return tf.reduce_mean(abs(resid - median))
 
 def bias_MAD_loss(y_true, y_pred):
     resid = (y_true - y_pred)/(1 + y_true)
-    median = tf.contrib.distributions.percentile(resid,50.)
-    #median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
+    #median = tf.contrib.distributions.percentile(resid,50.)
+    median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
     return tf.sqrt(tf.reduce_mean(abs(resid))) + 1.4826 * (tf.reduce_mean(abs(resid - median)))
 
 def get_negative_mask(batch_size):
@@ -48,6 +46,40 @@ def cos_sim_dim1(x,y):
 def cos_sim_dim2(x,y):
     cos_sim = tf.keras.losses.CosineSimilarity(axis=2, reduction=tf.keras.losses.Reduction.NONE)
     return cos_sim(tf.expand_dims(x,1), tf.expand_dims(y,0))
+
+class CustomAugment(object):
+    def __call__(self, sample):        
+        # Random flips
+        sample = self._random_apply(tf.image.flip_left_right, sample, p=0.5)
+        
+        # Randomly apply transformation (color distortions) with probability p.
+        sample = self._random_apply(self._color_jitter, sample, p=0.8)
+        #sample = self._random_apply(self._color_drop, sample, p=0.2)
+
+        return sample
+
+    def _color_jitter(self, x, s=1):
+        # one can also shuffle the order of following augmentations
+        # each time they are applied.
+        x = tf.image.random_brightness(x, max_delta=0.8*s)
+        x = tf.image.random_contrast(x, lower=1-0.8*s, upper=1+0.8*s)
+        #x = tf.image.random_saturation(x, lower=1-0.8*s, upper=1+0.8*s)
+        #x = tf.image.random_hue(x, max_delta=0.2*s)
+        x = tf.clip_by_value(x, 0, 1)
+        return x
+    
+    def _color_drop(self, x):
+        x = tf.image.rgb_to_grayscale(x)
+        x = tf.tile(x, [1, 1, 1, 5])
+        return x
+    
+    def _random_apply(self, func, x, p):
+        return tf.cond(
+          tf.less(tf.random.uniform([], minval=0, maxval=1, dtype=tf.float32),
+                  tf.cast(p, tf.float32)),
+          lambda: func(x),
+          lambda: x)
+
 
 class Network():
     def __init__(self, input_shape, noise=False):
@@ -68,7 +100,7 @@ class Network():
         self.res_curr_epoch = 0
         self.mlp_curr_epoch = 0
 
-        self.Augmenter = Augmenter(2)
+        self.data_aug = keras.Sequential([layers.Lambda(CustomAugment())])
 
         self.inp1 = layers.Input(input_shape)      
         self.inp2 = layers.Input(self.z_size)
@@ -131,8 +163,8 @@ class Network():
             for i in range(num_batches):
                 batch_x = x_train[i*self.batch_size:(i+1)*self.batch_size]
 
-                x_train_i = self.Augmenter.transform_set(batch_x)
-                x_train_j = self.Augmenter.transform_set(batch_x)
+                x_train_i = self.data_aug(batch_x)
+                x_train_j = self.data_aug(batch_x)
                 
                 loss = self._train_step(x_train_i, x_train_j)
                 
