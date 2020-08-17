@@ -64,9 +64,8 @@ def get_z_dataset(N = 1000, sigma=False):
 def load_z_dataset():
     try:
         import pickle
-        img, params = pickle.load(open("data.pickle","rb"))
+        img, params = pickle.load(open("databig.pickle","rb"))
 
-        """
         idx = [i for i, params in enumerate(params) if params > 3.5]
         img = np.delete(img, idx,axis=0)
         params = np.delete(params, idx)
@@ -94,7 +93,6 @@ def load_z_dataset():
         img = np.array(img)
         params = [item for sublist in new_params for item in sublist]
         params = np.array(params)
-        """
 
         return img, params, np.shape(img[0]), 1
     
@@ -120,7 +118,7 @@ class Loader():
             self.x_min[i] = np.min(x[:,:,:,i])
             self.x_max[i] = np.max(x[:,:,:,i])
             x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
-        """
+        """ 
         if dat != "MNIST":
             self.y_min = np.min(y)
             self.y_max = np.max(y)
