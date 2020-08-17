@@ -65,8 +65,8 @@ def load_z_dataset():
     try:
         import pickle
         img, params = pickle.load(open("data.pickle","rb"))
-        out_size = 1
-        """ 
+
+        """
         idx = [i for i, params in enumerate(params) if params > 3.5]
         img = np.delete(img, idx,axis=0)
         params = np.delete(params, idx)
@@ -95,7 +95,8 @@ def load_z_dataset():
         params = [item for sublist in new_params for item in sublist]
         params = np.array(params)
         """
-        return img, params, np.shape(img[0]), out_size 
+
+        return img, params, np.shape(img[0]), 1
     
     except:
         print("Could not load data")
@@ -109,7 +110,8 @@ class Loader():
             "load_z": load_z_dataset()}
 
         x, y, self.input_shape, self.num_out = self.datasets[dat]
-        
+       
+        """
         dims = self.input_shape[-1]
         self.x_min = np.zeros(dims)
         self.x_max = np.zeros(dims)
@@ -118,7 +120,7 @@ class Loader():
             self.x_min[i] = np.min(x[:,:,:,i])
             self.x_max[i] = np.max(x[:,:,:,i])
             x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
-        
+        """
         if dat != "MNIST":
             self.y_min = np.min(y)
             self.y_max = np.max(y)
@@ -166,8 +168,8 @@ class Augmenter():
     def __init__(self, number=1):
        
         self.number = number
-        self.transforms = ['rotate', 'translateX', 'translateY', 'shear',\
-                            'noise', 'filter', 'lineX', 'lineY']
+        self.transforms = ['rotate', 'translateX', 'translateY', \
+                            'noise', 'filter']
         
         self.func = {
             "rotate": lambda x, param: transform.rotate(x, param*360),
@@ -175,12 +177,12 @@ class Augmenter():
                 transform.AffineTransform(translation=(param*10 - 5,0))),
             "translateY": lambda x, param: transform.warp(x,\
                 transform.AffineTransform(translation=(0, param*10 - 5))),
-            "shear": lambda x, param: transform.warp(x,\
-                transform.AffineTransform(shear=(param -0.5))),
+            #"shear": lambda x, param: transform.warp(x,\
+            #    transform.AffineTransform(shear=(param -0.5))),
             "noise": lambda x, param: np.clip(x + np.random.normal(0,param*0.1,x.shape),0,1),
             "filter": lambda x, param: gaussian_filter(x, 1),
-            "lineX": lambda x, param: self.removeX(x,param),
-            "lineY": lambda x, param: self.removeY(x,param)
+            #"lineX": lambda x, param: self.removeX(x,param),
+            #"lineY": lambda x, param: self.removeY(x,param)
         }
 
     def removeX(self,x,param):
