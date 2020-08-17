@@ -166,21 +166,20 @@ class Augmenter():
     def __init__(self, number=1):
        
         self.number = number
-        self.transforms = ['rotate', 'translateX', 'translateY', \
-                            'noise', 'filter']
+        self.transforms = ['rotate', 'translateX', 'translateY', 'filter']
         
         self.func = {
             "rotate": lambda x, param: transform.rotate(x, param*360),
             "translateX": lambda x, param: transform.warp(x,\
-                transform.AffineTransform(translation=(param*10 - 5,0))),
+                transform.AffineTransform(translation=(param*1 - 1,0))),
             "translateY": lambda x, param: transform.warp(x,\
-                transform.AffineTransform(translation=(0, param*10 - 5))),
-            #"shear": lambda x, param: transform.warp(x,\
-            #    transform.AffineTransform(shear=(param -0.5))),
+                transform.AffineTransform(translation=(0, param*1 - 1))),
+            "shear": lambda x, param: transform.warp(x,\
+                transform.AffineTransform(shear=(param -0.5))),
             "noise": lambda x, param: np.clip(x + np.random.normal(0,param*0.1,x.shape),0,1),
             "filter": lambda x, param: gaussian_filter(x, 1),
-            #"lineX": lambda x, param: self.removeX(x,param),
-            #"lineY": lambda x, param: self.removeY(x,param)
+            "lineX": lambda x, param: self.removeX(x,param),
+            "lineY": lambda x, param: self.removeY(x,param)
         }
 
     def removeX(self,x,param):
