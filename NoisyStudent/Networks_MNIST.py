@@ -19,7 +19,7 @@ class Network_MNIST(Network):
             self.Net = tf.keras.models.Model(self.inp, self.CNN(self.inp))
         
         self.Net.compile(loss=tf.keras.losses.categorical_crossentropy,
-              optimizer=tf.keras.optimizers.Adadelta(learning_rate=self.lr),
+              optimizer=tf.keras.optimizers.Adam(learning_rate=self.lr),
               metrics=['accuracy'])
    
     def CNN(self, x):

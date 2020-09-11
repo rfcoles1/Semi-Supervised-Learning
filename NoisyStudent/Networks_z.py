@@ -54,7 +54,7 @@ class Network_z(Network):
         if noise==True:
             self.Net = tf.keras.models.Model(self.inp, self.tf_resnet_noise(self.inp))
         else:
-            self.Net = tf.keras.models.Model(self.inp, self.resnet(self.inp))
+            self.Net = tf.keras.models.Model(self.inp, self.tf_resnet(self.inp))
 
         self.Net.compile(loss=tf.keras.losses.MSE,
             optimizer=optimizer,

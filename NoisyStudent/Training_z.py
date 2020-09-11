@@ -20,7 +20,9 @@ params = z.numpy()
 x_train, x_test, y_train, y_test = train_test_split(img,params,test_size=0.2)
 
 def TrainTeacher(epochs,teach_path = './records/test', load = False):
-   
+
+    es = tf.keras.callbacks.EarlyStopping(monitor="val_loss",\
+        patience=5, verbose=3)
     Teacher_Net = Network_z(np.shape(x_train[0]), 1, noise=False)
     if load:
         Teacher_Net.load(path=teach_path)

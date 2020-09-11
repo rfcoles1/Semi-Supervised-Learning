@@ -28,17 +28,14 @@ def plot_loss(results, labels, lim=[100,3], filt=False, train=False):
             iters = np.arange(0, len(mse),1)
         else:
             mse = np.concatenate(result['test_MSE'])
-        iters = np.concatenate(result['iterations'])
+            iters = np.concatenate(result['iterations'])
         
         if filt:
             mse = savgol_filter(mse, 11, 1)
 
         ax.plot(iters, mse,label=label)
     
-    if train:
-        ax.set_ylabel('Train Loss (MSE)')
-    else:
-        ax.set_ylabel('Test Loss (MSE)')
+    ax.set_ylabel('Loss (MSE)')
     ax.set_xlabel('Iterations')
     ax.set_ylim(bottom=0, top=lim[1])
     ax.set_xlim(left=0, right=lim[0])
@@ -92,7 +89,6 @@ def plot_metrics(results, labels, lim=[100,3,1,1,2]):
 
 def plot_resid(true, pred, y_min, y_max):
    
-   
     true = true*(y_max - y_min) + y_min
     pred = pred*(y_max - y_min) + y_min
 
@@ -100,18 +96,20 @@ def plot_resid(true, pred, y_min, y_max):
     bias = np.median(resid)
     std = np.std(resid)
 
-    xlim = [0,3]
-    ylim = [4,-4]
+    xlim = [0.4,3.6]
+    ylim = [-4,4]
     
     fig = plt.figure(figsize=(8,6))
     grid = gs.GridSpec(1,2, width_ratios=[4,1])
 
     ax0 = fig.add_subplot(grid[0,0])
-    ax0.scatter(true, resid, color='crimson')
+    ax0.scatter(true, resid, color='crimson', alpha=0.5)
     ax0.plot(xlim, [0,0], color='dimgrey', linestyle='--')
 
     ax0.set_xlim(xlim[0], xlim[1])
     ax0.set_ylim(ylim[0], ylim[1])
+    ax0.set_xlabel('Test Value')
+    ax0.set_ylabel('Residual')
     ax0.grid()
 
     n, bin_edges = np.histogram(resid, 50)
@@ -131,4 +129,28 @@ def plot_resid(true, pred, y_min, y_max):
     ax1.grid(axis='y')
     ax1.yaxis.tick_right()
     ax1.yaxis.set_label_position('right')
+
+def plot_diff(true, pred, y_min, y_max):
+   
+    true = true*(y_max - y_min) + y_min
+    pred = pred*(y_max - y_min) + y_min
+
+    xlim = [0.4,3.7]
+    
+    fig = plt.figure(figsize=(8,8))
+    grid = gs.GridSpec(1,1)
+
+    ax0 = fig.add_subplot(grid[0,0])
+    ax0.scatter(true, pred, color='crimson', alpha=0.5)
+    ax0.plot(xlim, xlim, color='dimgrey', linestyle='--')
+
+    ax0.set_xlim(xlim[0], xlim[1])
+    ax0.set_ylim(xlim[0], xlim[1])
+    ax0.set_xticks([1,2,3])
+    ax0.set_yticks([1,2,3])
+    ax0.set_xlabel('Test Value')
+    ax0.set_ylabel('Predicted Value')
+    ax0.grid()
+
+
 
