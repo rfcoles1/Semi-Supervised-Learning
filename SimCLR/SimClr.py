@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings('ignore')
 
-import os
+import os, sys
 import time
 import numpy as np
 import pickle
@@ -15,29 +15,25 @@ import tensorflow_probability as tfp
 
 import sklearn
 
-def abs_bias_loss(y_true, y_pred):
-    loss = tf.reduce_mean(abs(y_true - y_pred))/(1 + y_true)
-    return loss 
+sys.path.insert(1, '../Utils')
+from metrics import *
+from datasets import *
+from augment import *
 
-def MAD_loss(y_true, y_pred):
-    resid = (y_true - y_pred)/(1 + y_true)
-    #median = tf.contrib.distributions.percentile(resid,50.)
-    median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
-    return tf.reduce_mean(abs(resid - median))
-
-def bias_MAD_loss(y_true, y_pred):
-    resid = (y_true - y_pred)/(1 + y_true)
-    #median = tf.contrib.distributions.percentile(resid,50.)
-    median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
-    return tf.sqrt(tf.reduce_mean(abs(resid))) + 1.4826 * (tf.reduce_mean(abs(resid - median)))
 
 def get_negative_mask(batch_size):
     negative_mask = np.ones((batch_size, 2*batch_size), dtype=bool)
     for i in range(batch_size):
         negative_mask[i,i] = 0
         negative_mask[i, i+batch_size] = 0
-    #return tf.constant(negative_mask)
-    return negative_mask
+    return tf.constant(negative_mask)
+
+
+def dot_sim_dim1(x,y):
+    return tf.matmul(tf.expand_dims(x,1), tf.expand_dims(y,2))
+
+def dot_sim_dim2(x,y):
+    return tf.tensordot(tf.expand_dims(x,1), tf.expand_dims(tf.transpose(y), 0), axes=2)
 
 def cos_sim_dim1(x,y):
     cos_sim = tf.keras.losses.CosineSimilarity(axis=1, reduction=tf.keras.losses.Reduction.NONE)
@@ -47,48 +43,14 @@ def cos_sim_dim2(x,y):
     cos_sim = tf.keras.losses.CosineSimilarity(axis=2, reduction=tf.keras.losses.Reduction.NONE)
     return cos_sim(tf.expand_dims(x,1), tf.expand_dims(y,0))
 
-class CustomAugment(object):
-    def __call__(self, sample):        
-        # Random flips
-        sample = self._random_apply(tf.image.flip_left_right, sample, p=0.5)
-        
-        # Randomly apply transformation (color distortions) with probability p.
-        sample = self._random_apply(self._color_jitter, sample, p=0.8)
-        #sample = self._random_apply(self._color_drop, sample, p=0.2)
-
-        return sample
-
-    def _color_jitter(self, x, s=1):
-        # one can also shuffle the order of following augmentations
-        # each time they are applied.
-        x = tf.image.random_brightness(x, max_delta=0.8*s)
-        x = tf.image.random_contrast(x, lower=1-0.8*s, upper=1+0.8*s)
-        #x = tf.image.random_saturation(x, lower=1-0.8*s, upper=1+0.8*s)
-        #x = tf.image.random_hue(x, max_delta=0.2*s)
-        x = tf.clip_by_value(x, 0, 1)
-        return x
-    
-    def _color_drop(self, x):
-        x = tf.image.rgb_to_grayscale(x)
-        x = tf.tile(x, [1, 1, 1, 5])
-        return x
-    
-    def _random_apply(self, func, x, p):
-        return tf.cond(
-          tf.less(tf.random.uniform([], minval=0, maxval=1, dtype=tf.float32),
-                  tf.cast(p, tf.float32)),
-          lambda: func(x),
-          lambda: x)
-
 
 class Network():
-    def __init__(self, input_shape, tfres=True, noise=False):
+    def __init__(self, input_shape, noise=False):
         
         self.dirpath = 'records_z/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
-        self.lr = 0.001
         self.temp = 0.1
         self.batch_size = 64
         self.z_size = 64
@@ -97,44 +59,44 @@ class Network():
 
         self.hist = defaultdict(list)
         self.chkpt = 1
-        self.res_curr_epoch = 0
+        self.simclr_curr_epoch = 0
         self.mlp_curr_epoch = 0
 
-        self.data_aug = keras.Sequential([layers.Lambda(CustomAugment())])
-
+        #self.data_aug = keras.Sequential([layers.Lambda(CustomAugment())])
+        self.data_aug = Augmenter(2)
+    
         self.inp1 = layers.Input(input_shape)      
         self.inp2 = layers.Input(self.z_size)
-        if tfres == True:
-            self.ResNet = tf.keras.models.Model(self.inp1, self.tf_resnet(self.inp1))
-        else:    
-            self.ResNet = tf.keras.models.Model(self.inp1, self.resnet(self.inp1))
+        
+        self.SimClr = tf.keras.models.Model(self.inp1, self.mlp(self.tf_resnet(self.inp1)))
         self.Mlp = tf.keras.models.Model(self.inp2, self.mlp(self.inp2))
-        self.SimClr = tf.keras.models.Model(self.inp1, self.mlp(self.resnet(self.inp1)))
-
+       
         self.criterion = tf.keras.losses.SparseCategoricalCrossentropy(\
             from_logits=True, reduction=tf.losses.Reduction.SUM)
-        self.optimizer = tf.keras.optimizers.SGD()
+        
+        lr_decayed_fn = tf.keras.experimental.CosineDecay(\
+            initial_learning_rate=0.1, decay_steps=1000)
+        self.optimizer = tf.keras.optimizers.Adam(lr_decayed_fn)
 
-        es = tf.keras.callbacks.EarlyStopping(monitor="val_loss",\
+        self.es = tf.keras.callbacks.EarlyStopping(monitor="val_loss",\
             patience=3, verbose=3, restore_best_weights=True)
         
         self.Mlp.compile(loss=tf.keras.losses.MSE,
-            optimizer=tf.keras.optimizers.Adam(learning_rate=self.lr))
+            optimizer=self.optimizer)
+
 
     def tf_resnet(self,x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         base_model.trainabe = True
-        inputs = layers.Input((32,32,5))
-        h = base_model(x, training=True)
-        h = layers.GlobalAveragePooling2D()(h)
+        
+        x = base_model(x, training=True)
+        x = layers.GlobalAveragePooling2D()(x)
 
-        projection_1 = layers.Dense(256,activation='relu')(h)
-        projection_2 = layers.Dense(128,activation='relu')(projection_1)
-        projection_3 = layers.Dense(50)(projection_2)
-
-        return projection_3
-    
+        x = layers.Dense(256, activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(128, activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(self.z_size)(x)
+        return x
     
     def resnet(self,x):
         x = layers.Conv2D(32, kernel_size=(3,3), padding='same')(x)
@@ -161,21 +123,21 @@ class Network():
         x = layers.Dense(self.z_size)(x)
         return x
 
-    def mlp(self, x, hid1=64):
-        y = layers.Dense(hid1, activation=layers.LeakyReLU(alpha=0.1))(x)
-        y = layers.Dense(1)(y)
-        return y
+    def mlp(self, x):
+        x = layers.Dense(256, activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(128, activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(1)(x)
+        return x
     
 
 
-    def train_res(self, x_train, epochs, verbose=2):
-        it = 1 
+    def train_augment(self, x_train, epochs):
         num_batches = int(np.floor(len(x_train)/self.batch_size)) 
 
         batch_losses = np.zeros(num_batches)
         epoch_losses = np.zeros(self.chkpt)
 
-        for it in range(epochs+1):
+        for it in range(epochs):
             start = time.time()
             x_train = sklearn.utils.shuffle(x_train)
             for i in range(num_batches):
@@ -189,26 +151,60 @@ class Network():
                 batch_losses[i] = loss
             
             epoch_losses[it%self.chkpt] = np.mean(batch_losses) 
-
+            
             if it % self.chkpt == 0:
-                self.res_curr_epoch += self.chkpt
+                self.simclr_curr_epoch += self.chkpt
                 
-                print('Epoch %d - Time Taken %f' % (self.res_curr_epoch, time.time()-start))
+                print('Epoch %d - Time Taken %f' % (self.simclr_curr_epoch, time.time()-start))
                 print('Train Loss %f' % np.mean(batch_losses))
 
-                self.hist['res_epochs'].append(self.res_curr_epoch)
-                self.hist['res_train_loss'].append(epoch_losses)
+                self.hist['sim_epochs'].append(self.simclr_curr_epoch)
+                self.hist['sim_loss'].append(epoch_losses)
+
+            it += 1
+
+    def train_super(self, x_train, y_train, epochs):
+        num_batches = int(np.floor(len(x_train)/self.batch_size)) 
+
+        batch_losses = np.zeros(num_batches)
+        epoch_losses = np.zeros(self.chkpt)
+
+        for it in range(epochs):
+            start = time.time()
+            x_train = sklearn.utils.shuffle(x_train)
+            for i in range(num_batches):
+                batch_x = x_train[i*self.batch_size:(i+1)*self.batch_size]
+
+                ### METHOD TO GET PAIRS OF SIMILAR DATA
+                ### Will need to return two lists for each point
+                
+                loss = self._train_step(x_train_i, x_train_j)
+                 
+                batch_losses[i] = loss
+            
+            epoch_losses[it%self.chkpt] = np.mean(batch_losses) 
+
+            if it % self.chkpt == 0:
+                self.simclr_curr_epoch += self.chkpt
+                
+                print('Epoch %d - Time Taken %f' % (self.simclr_curr_epoch, time.time()-start))
+                print('Train Loss %f' % np.mean(batch_losses))
+
+                self.hist['sim_epochs'].append(self.simclr_curr_epoch)
+                self.hist['sim_loss'].append(epoch_losses)
+
+            it += 1
 
     def _train_step(self, x_train_i, x_train_j):
         with tf.GradientTape() as tape:
-            zi = self.ResNet(x_train_i)
-            zj = self.ResNet(x_train_j)
+            zi = self.SimClr(x_train_i)
+            zj = self.SimClr(x_train_j)
 
 
             zi = tf.math.l2_normalize(zi, axis=1)
             zj = tf.math.l2_normalize(zj, axis=1)
             
-            l_pos = cos_sim_dim1(zi, zj)
+            l_pos = dot_sim_dim1(zi, zj)
             l_pos = tf.reshape(l_pos, (self.batch_size,1))
             l_pos /= self.temp
             negatives = tf.concat([zj, zi], axis=0)
@@ -217,7 +213,7 @@ class Network():
             for positives in [zi, zj]:
                 
                 labels = tf.zeros(self.batch_size, dtype=tf.int32)
-                l_neg = cos_sim_dim2(positives, negatives)
+                l_neg = dot_sim_dim2(positives, negatives)
                 l_neg = tf.boolean_mask(l_neg, self.negative_mask)
                 l_neg = tf.reshape(l_neg, (self.batch_size, -1))
                 l_neg /= self.temp
@@ -226,8 +222,8 @@ class Network():
                 loss += self.criterion(y_pred=logits, y_true=labels)
             loss = loss/(2*self.batch_size)
 
-            gradients = tape.gradient(loss, self.ResNet.trainable_variables)
-            self.optimizer.apply_gradients(zip(gradients, self.ResNet.trainable_variables))
+            gradients = tape.gradient(loss, self.SimClr.trainable_variables)
+            self.optimizer.apply_gradients(zip(gradients, self.SimClr.trainable_variables))
             
             return loss
 
@@ -235,15 +231,19 @@ class Network():
         x_train_rep = self.ResNet(x_train)
         x_test_rep = self.ResNet(x_test)
         
-        history = self.Mlp.fit(x_train_rep,y_train,
+        History = self.Mlp.fit(x_train_rep,y_train,
             batch_size = self.batch_size,
             epochs = epochs,
             verbose = 2,
             validation_data = (x_test_rep, y_test))
 
-        #self.hist['mlp_epochs'].append(
-        self.hist['mlp_train_loss'].append(history.history['loss'])
-        self.hist['mlp.test_loss'].append(history.history['val_loss'])
+        epochs_arr = np.arange(self.mlp_curr_epoch, self.mlp_curr_epoch_epochs, 1)
+        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
+
+        self.hist['epochs'].append(epochs_arr)
+        self.hist['iterations'].append(epochs_arr*iterations)
+        self.hist['train_MSE'].append(History.history['loss'])
+        self.hist['test_MSE'].append(History.history['val_loss'])
 
         self.mlp_curr_epoch += epochs
 
@@ -275,6 +275,10 @@ class Network():
         f.close()
         self.Net.load_weights(self.dirpath + path + '.h5')
         self.curr_epoch = self.hist['epochs'][-1][-1]
+
+
+
+
 
 def _add_common_layers(y):
     y = layers.BatchNormalization()(y)
