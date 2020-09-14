@@ -1,7 +1,7 @@
 import warnings
 warnings.filterwarnings('ignore')
 
-import os
+import os, sys
 import numpy as np
 import pickle
 from collections import defaultdict
@@ -10,6 +10,13 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras import layers as layers
 from tensorflow.keras import backend as K
+
+class LossHistory(keras.callbacks.Callback):
+    def on_train_begin(self, logs={}):
+        self.history = {'loss':[], 'val_loss':[]}
+
+    def on_batch_end(self, batch, logs={}):
+        self.history['loss'].append(logs.get('loss'))
 
 class Network():
     def __init__(self):

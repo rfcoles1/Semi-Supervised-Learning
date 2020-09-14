@@ -1,5 +1,8 @@
 from Networks import *
 
+sys.path.insert(1, '../Utils')
+from datasets import *
+
 class Network_MNIST(Network):
     def __init__(self, input_shape, num_out, noise=False):
         super().__init__()
@@ -11,6 +14,7 @@ class Network_MNIST(Network):
         self.batch_size = 128
         self.input_shape = input_shape
         self.num_out = num_out
+        self.lr = 0.001
 
         self.inp = layers.Input(input_shape)
         if noise==True:
