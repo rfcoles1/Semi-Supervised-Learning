@@ -61,14 +61,14 @@ def get_z_dataset(N = 1000, sigma=False):
 
         return img, params, np.shape(img[0]), out_size
     except:
-        print("Could not generate Gal data")
+        print("Could not generate galaxy data")
 
 
 def load_z_dataset():
     try:
         import pickle
         import sys
-        img, params = pickle.load(open("databig.pickle","rb"))
+        img, params = pickle.load(open("../Data/databig.pickle","rb"))
         out_size = 1
         """ 
         idx = [i for i, params in enumerate(params) if params > 3.5]
@@ -102,7 +102,7 @@ def load_z_dataset():
         return img, params, np.shape(img[0]), out_size 
     
     except:
-        print("Could not load data")
+        print("Could not load galaxy data")
 
 class Loader():
     def __init__(self, test_per, dat):

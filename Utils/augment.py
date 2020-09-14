@@ -11,12 +11,15 @@ seed = 0
 np.random.seed(seed)
 
 class Augmenter():
-    def __init__(self, number=1):
+    def __init__(self, number=1, transforms='All'):
        
         self.number = number
-        self.transforms = ['rotate', 'translateX', 'translateY', 'shear',\
+        if transforms == 'All':
+            self.transforms = ['rotate', 'translateX', 'translateY', 'shear',\
                             'noise', 'filter', 'lineX', 'lineY']
-        
+        else:
+            self.transforms = transforms
+
         self.func = {
             "rotate": lambda x, param: transform.rotate(x, param*360),
             "translateX": lambda x, param: transform.warp(x,\
