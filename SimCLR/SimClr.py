@@ -4,6 +4,7 @@ warnings.filterwarnings('ignore')
 import os, sys
 import time
 import numpy as np
+import itertools
 import pickle
 from collections import defaultdict
 
@@ -171,13 +172,18 @@ class Network():
 
         for it in range(epochs):
             start = time.time()
-            x_train = sklearn.utils.shuffle(x_train)
+            x_train,y_train = sklearn.utils.shuffle([x_train,y_train])
             for i in range(num_batches):
                 batch_x = x_train[i*self.batch_size:(i+1)*self.batch_size]
+                batch_y = y_train[i*self.batch_size:(i+1)*self.batch_size]
 
                 ### METHOD TO GET PAIRS OF SIMILAR DATA
                 ### Will need to return two lists for each point
-                
+                pairs = get_pairs(batch_y)
+                left,right = np.hsplit(pairs)
+                x_train_i = batch_x[left]
+                x_train_j = batch_x[right]
+
                 loss = self._train_step(x_train_i, x_train_j)
                  
                 batch_losses[i] = loss
@@ -321,5 +327,29 @@ def _residual_block(y, n_channels_in, n_channels_out, strides=(1,1), project_sho
     y = layers.LeakyReLU(alpha=0.1)(y)
     return y
     
-
-
+#returns indices of points that ~should~ be similar redshift values
+#computed such that the set of pairs with the smallest summed distance is returned
+#really needs to be optimized lol 
+def get_pairs(elements):
+    num = len(elements)
+    num_pairs = int(np.ceil(num)/2)
+    indices = np.arange(0,num,1)
+    
+    pairs = list(itertools.combinations(indices,2))
+    pairs = [list(p) for p in pairs]
+    
+    combs = list(itertools.combinations(pairs,num_pairs))
+    combs = [list(p) for p in combs]
+    print('here') 
+    flat_combs = np.array(combs).reshape(-1,num)
+    
+    sets = [True if len(np.unique(p))==num else False for p in flat_combs]
+    idxs = [i for i,b in enumerate(sets) if b]
+    print('now here')
+    pairsets = np.array(combs)[idxs]
+    
+    indices = np.digitize(pairsets.ravel(),indices, right=True)
+    values = elements[indices].reshape(pairsets.shape)
+    print('one last time')
+    min_set_idx = np.argmin(np.sum(abs(np.diff(values,axis=2)),axis=1))
+    return pairsets[min_set_idx], values[min_set_idx]
