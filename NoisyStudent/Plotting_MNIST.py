@@ -1,18 +1,6 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gs
-
-big = 32
-med = 24
-smol = 18
-
-plt.rc('font', size=smol)
-plt.rc('figure', titlesize=big)
-plt.rc('legend', fontsize=smol)
-plt.rc('axes', titlesize=med)
-plt.rc('axes', labelsize=smol)
-plt.rc('xtick', labelsize=smol)
-plt.rc('ytick', labelsize=smol)
+import sys
+sys.path.insert(1, '../Utils')
+from plot_results import *
 
 def plot_results(results, labels, lim=[400000,3,1]):
     fig = plt.figure(figsize=(12,8))

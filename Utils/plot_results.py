@@ -1,4 +1,6 @@
 import numpy as np
+import pickle 
+import os
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gs
 import scipy.stats as stats
@@ -17,7 +19,22 @@ plt.rc('xtick', labelsize=smol)
 plt.rc('ytick', labelsize=smol)
 
 
-def plot_resid(true, pred, y_min, y_max):
+def load_folder(path):
+    filelist = os.listdir(path) 
+    filelist = [f for f in filelist if '.pickle' in f]
+    histories = []
+    labels = []
+    
+    for thisfile in filelist:
+        f = open(path + '/' + thisfile, 'rb')
+        hist = pickle.load(f)
+        histories.append(hist)
+        labels.append(thisfile)
+        f.close()
+
+    return histories, labels
+
+def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-4,4]):
 
     true = true*(y_max - y_min) + y_min
     pred = pred*(y_max - y_min) + y_min
@@ -25,9 +42,6 @@ def plot_resid(true, pred, y_min, y_max):
     resid = true - pred
     bias = np.median(resid)
     std = np.std(resid)
-
-    xlim = [0.4,3.6]
-    ylim = [-4,4]
 
     fig = plt.figure(figsize=(8,6))
     grid = gs.GridSpec(1,2, width_ratios=[4,1])
@@ -60,12 +74,10 @@ def plot_resid(true, pred, y_min, y_max):
     ax1.yaxis.tick_right()
     ax1.yaxis.set_label_position('right')
 
-def plot_diff(true, pred, y_min, y_max):
+def plot_diff(true, pred, y_min, y_max, xlim=[0.4,3.6]):
 
     true = true*(y_max - y_min) + y_min
     pred = pred*(y_max - y_min) + y_min
-
-    xlim = [0.4,3.7]
 
     fig = plt.figure(figsize=(8,8))
     grid = gs.GridSpec(1,1)

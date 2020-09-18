@@ -1,20 +1,7 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gs
-import scipy.stats as stats
-from scipy.signal import savgol_filter
+import sys
+sys.path.insert(1, '../Utils')
+from plot_results import *
 
-big = 32
-med = 24
-smol = 18
-
-plt.rc('font', size=smol)
-plt.rc('figure', titlesize=big)
-plt.rc('legend', fontsize=smol)
-plt.rc('axes', titlesize=med)
-plt.rc('axes', labelsize=smol)
-plt.rc('xtick', labelsize=smol)
-plt.rc('ytick', labelsize=smol)
 
 def plot_loss(results, labels, lim=[100,3], filt=False, train=False):
     fig = plt.figure(figsize=(12,8))
@@ -86,71 +73,4 @@ def plot_metrics(results, labels, lim=[100,3,1,1,2]):
     ax3.set_xlim(left=0, right=lim[0])
     ax3.set_ylim(bottom=0, top=lim[4])
     ax3.grid()
-
-def plot_resid(true, pred, y_min, y_max):
-   
-    true = true*(y_max - y_min) + y_min
-    pred = pred*(y_max - y_min) + y_min
-
-    resid = true - pred
-    bias = np.median(resid)
-    std = np.std(resid)
-
-    xlim = [0.4,3.6]
-    ylim = [-4,4]
-    
-    fig = plt.figure(figsize=(8,6))
-    grid = gs.GridSpec(1,2, width_ratios=[4,1])
-
-    ax0 = fig.add_subplot(grid[0,0])
-    ax0.scatter(true, resid, color='crimson', alpha=0.5)
-    ax0.plot(xlim, [0,0], color='dimgrey', linestyle='--')
-
-    ax0.set_xlim(xlim[0], xlim[1])
-    ax0.set_ylim(ylim[0], ylim[1])
-    ax0.set_xlabel('Test Value')
-    ax0.set_ylabel('Residual')
-    ax0.grid()
-
-    n, bin_edges = np.histogram(resid, 50)
-    probs = n/np.shape(resid)[0]
-    bin_mid = (bin_edges[1:]+bin_edges[:-1])/2.0
-    bin_wid = bin_edges[1]-bin_edges[0] 
-    (mu, sigma) = stats.norm.fit(resid)
-    y = stats.norm.pdf(bin_mid, mu, sigma)*bin_wid
-
-    ax1 = fig.add_subplot(grid[0,1])
-    ax1.plot(y, bin_mid, color='darkred', lw=2)
-    ax1.plot([0,max(y)], [0,0], color='dimgrey', linestyle='--')
-
-    ax1.set_xlim(0,max(y))
-    ax1.set_ylim(ylim[0],ylim[1])
-    ax1.get_xaxis().set_visible(False)
-    ax1.grid(axis='y')
-    ax1.yaxis.tick_right()
-    ax1.yaxis.set_label_position('right')
-
-def plot_diff(true, pred, y_min, y_max):
-   
-    true = true*(y_max - y_min) + y_min
-    pred = pred*(y_max - y_min) + y_min
-
-    xlim = [0.4,3.7]
-    
-    fig = plt.figure(figsize=(8,8))
-    grid = gs.GridSpec(1,1)
-
-    ax0 = fig.add_subplot(grid[0,0])
-    ax0.scatter(true, pred, color='crimson', alpha=0.5)
-    ax0.plot(xlim, xlim, color='dimgrey', linestyle='--')
-
-    ax0.set_xlim(xlim[0], xlim[1])
-    ax0.set_ylim(xlim[0], xlim[1])
-    ax0.set_xticks([1,2,3])
-    ax0.set_yticks([1,2,3])
-    ax0.set_xlabel('Test Value')
-    ax0.set_ylabel('Predicted Value')
-    ax0.grid()
-
-
 
