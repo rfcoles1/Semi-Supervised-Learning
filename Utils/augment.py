@@ -18,7 +18,7 @@ class Augmenter():
         self.N = N #number of transformations
 
         self.func = {
-            "rotate": lambda x, mag: rotate(x, mag, axes=(1,2), reshape=False),
+            "rotate": lambda x, mag: rotate(x, mag, axes=(0,1), reshape=False),
             "translateX": lambda x, mag: transform.warp(x,\
                 transform.AffineTransform(translation=(mag, 0))),
             "translateY": lambda x, mag: transform.warp(x,\
