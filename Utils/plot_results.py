@@ -29,10 +29,37 @@ def load_folder(path):
         f = open(path + '/' + thisfile, 'rb')
         hist = pickle.load(f)
         histories.append(hist)
-        labels.append(thisfile)
+        labels.append(thisfile[:-7])
         f.close()
 
     return histories, labels
+
+def show_aug(img, Augmenter, channel=0, scale=False):
+       
+    aug = Augmenter.transform(img)
+
+    fig = plt.figure(figsize=(6,3))
+    grid = gs.GridSpec(1,2)
+    ax1 = fig.add_subplot(grid[0])
+    ax2 = fig.add_subplot(grid[1])
+
+    min1 = np.min(img[channel,:,:])
+    max1 = np.max(img[channel,:,:])
+    min2 = np.min(aug[channel,:,:])
+    max2 = np.max(aug[channel,:,:])
+    mini = min(min1, min2)
+    maxi = max(max1, max2)
+    if scale:
+        ax1.imshow(img[channel,:,:], vmin=min1, vmax=max2)
+        ax2.imshow(aug[channel,:,:], vmin=min1, vmax=max2)
+    else:
+        ax1.imshow(img[channel,:,:])
+        ax2.imshow(aug[channel,:,:])
+ 
+    ax1.axis('off')
+    ax2.axis('off')
+    plt.show()
+        
 
 def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-4,4]):
 
