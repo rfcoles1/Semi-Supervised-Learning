@@ -26,19 +26,21 @@ class Augmenter():
             "shear": lambda x, mag: transform.warp(x,\
                 transform.AffineTransform(shear=(mag))),
             "noise": lambda x, mag: np.clip(x + np.random.normal(0,mag,x.shape),0,1),
+            "onenoise": lambda x, param: self.oneChannelNoise(x, param),
             "filter": lambda x, mag: gaussian_filter(x, mag)}
-
+            
         self.ranges = {
                 "rotate": [0,360],
                 "translateX": [0, self.imsize/2],
                 "translateY": [0, self.imsize/2],
                 "shear": [0,1],
                 "noise": [0,1],
+                "onenoise": [0,1],
                 "filter": [0,1]}
 
         if transforms == 'All':#default then use all functions
             self.transforms = ['rotate', 'translateX', 'translateY', 'shear',\
-                            'noise', 'filter']
+                            'noise', 'onenoise', 'filter']
         else: #specifies some functions
             self.transforms = transforms
             if len(transforms)==len(M):#if the correct number of ranges are also specificed
@@ -46,7 +48,20 @@ class Augmenter():
                 for i in range(len(transforms)):
                     print(transforms[i], M[i]) 
                     self.ranges[transforms[i]] = M[i]
+      
+    def oneChannelNoise(self, x, mag):
+        noise = np.random.normal(0,mag,x.shape)
         
+        dims = np.shape(x)[-1]
+        
+        oh_channel = np.zeros(dims)
+        oh_channel[np.random.randint(0,dims)]=1
+
+        for j in range(np.shape(noise)[-1]):
+            noise[:,:,j] *= oh_channel[j]
+
+        return np.clip(x + noise, 0,1)
+
     #def transform_set(self,x):
     def __call__(self,x):
         x_aug = np.zeros_like(x)
@@ -59,6 +74,7 @@ class Augmenter():
         for (op, m) in operations:
             operation = self.func[op]
             op_min, op_max = self.ranges[op]
+            print(op_min, op_max)
             op_m = m*(op_max-op_min) + op_min
             x = operation(x, op_m)
         return x
