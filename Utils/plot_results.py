@@ -34,7 +34,7 @@ def load_folder(path):
 
     return histories, labels
 
-def show_aug(img, Augmenter, channel=0, scale=False):
+def show_aug(img, Augmenter, channel=0, scale=True):
        
     aug = Augmenter.transform(img)
 
@@ -51,8 +51,8 @@ def show_aug(img, Augmenter, channel=0, scale=False):
     mini = min(min1, min2)
     maxi = max(max1, max2)
     if scale:
-        ax1.imshow(img[:,:,channel], vmin=min1, vmax=max2)
-        ax2.imshow(aug[:,:,channel], vmin=min1, vmax=max2)
+        ax1.imshow(img[:,:,channel], vmin=min1, vmax=max1)
+        ax2.imshow(aug[:,:,channel], vmin=min1, vmax=max1)
     else:
         ax1.imshow(img[:,:,channel])
         ax2.imshow(aug[:,:,channel])
