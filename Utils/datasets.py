@@ -68,38 +68,40 @@ def load_z_dataset():
     try:
         import pickle
         import sys
-        img, params = pickle.load(open("../Data/databig.pickle","rb"))
-        out_size = 1
-        """ 
-        idx = [i for i, params in enumerate(params) if params > 3.5]
-        img = np.delete(img, idx,axis=0)
-        params = np.delete(params, idx)
-        
-        idx = [i for i, params in enumerate(params) if params < 0.5]
-        img = np.delete(img, idx,axis=0)
-        params = np.delete(params, idx)
+        img, z, _, _, _ = pickle.load(open("../Data/data_coord.pickle","rb"))
+        #img, z = pickle.load(open("../Data/databig.pickle","rb"))
 
-        n, bin_edges = np.histogram(params,20)
-        idxs = np.digitize(params, bin_edges)-1
+        out_size = 1
+        
+        idx = [i for i, z in enumerate(z) if z > 3.5]
+        img = np.delete(img, idx,axis=0)
+        z = np.delete(z, idx)
+        
+        idx = [i for i, z in enumerate(z) if z < 0.5]
+        img = np.delete(img, idx,axis=0)
+        z = np.delete(z, idx)
+
+        n, bin_edges = np.histogram(z,20)
+        idxs = np.digitize(z, bin_edges)-1
         new_imgs = [] 
-        new_params = []
+        new_z = []
         for j in range(len(n)):
             idx = [ix for ix, i in enumerate(idxs) if i==j]
             if n[j] > 500:
                 idx = np.random.choice(idx, 500, replace=False)
                 new_imgs.append(img[idx,:,:,:])
-                new_params.append(params[idx])
+                new_z.append(z[idx])
             else:
                 idx = np.hstack([idx, np.random.choice(idx,500-n[j])])
                 new_imgs.append(img[idx,:,:,:])
-                new_params.append(params[idx])
+                new_z.append(z[idx])
                  
         img = [item for sublist in new_imgs for item in sublist]
         img = np.array(img)
-        params = [item for sublist in new_params for item in sublist]
-        params = np.array(params)
-        """
-        return img, params, np.shape(img[0]), out_size 
+        z = [item for sublist in new_z for item in sublist]
+        z = np.array(z)
+        
+        return img, z, np.shape(img[0]), out_size 
     
     except:
         print("Could not load galaxy data")

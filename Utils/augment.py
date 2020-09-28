@@ -11,6 +11,12 @@ from scipy.ndimage import rotate
 seed = 0
 np.random.seed(seed)
 
+def cutimgs(x, size=32):
+    xdim = np.shape(x)[1]
+    start = xdim//2-(size//2)
+    return x[:,start:start+size, start:start+size]
+
+
 class Augmenter():
     def __init__(self, imgsize = 32, N=1, transforms='All', M=[[0,1]]):
         
