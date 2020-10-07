@@ -18,6 +18,10 @@ plt.rc('axes', labelsize=smol)
 plt.rc('xtick', labelsize=smol)
 plt.rc('ytick', labelsize=smol)
 
+def cutimg(x, size=32):
+    xdim = np.shape(x)[1]
+    start=xdim//2-(size//2)
+    return x[start:start+size, start:start+size]
 
 def load_folder(path):
     filelist = os.listdir(path) 
@@ -34,7 +38,7 @@ def load_folder(path):
 
     return histories, labels
 
-def show_aug(img, Augmenter, channel=0, scale=True):
+def show_aug(img, Augmenter, channel=0, resize=True,size=32,scale=True):
        
     aug = Augmenter.transform(img)
 
@@ -43,6 +47,9 @@ def show_aug(img, Augmenter, channel=0, scale=True):
     ax1 = fig.add_subplot(grid[0])
     ax2 = fig.add_subplot(grid[1])
 
+    if resize==True:
+        img = cutimg(img,size)
+        aug = cutimg(aug,size)
 
     min1 = np.min(img[:,:,channel])
     max1 = np.max(img[:,:,channel])

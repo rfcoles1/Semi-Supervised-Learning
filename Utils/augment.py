@@ -53,10 +53,10 @@ class Augmenter():
                             'noise', 'onenoise', 'filter', 'flatscale', 'noisescale']
         else: #specifies some functions
             self.transforms = transforms
+
             if len(transforms)==len(M):#if the correct number of ranges are also specificed
                 self.ranges = {}
                 for i in range(len(transforms)):
-                    print(transforms[i], M[i]) 
                     self.ranges[transforms[i]] = M[i]
       
     def oneChannelNoise(self, x, mag):

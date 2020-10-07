@@ -1,8 +1,9 @@
 import warnings 
 warnings.filterwarnings('ignore')
 
+import sys
 import numpy as np
-import tensorflow as tf
+import pickle
 
 from sklearn.model_selection import train_test_split
 from skimage import transform
@@ -10,35 +11,6 @@ from scipy.ndimage.filters import gaussian_filter
 
 seed = 0
 np.random.seed(seed)
-
-def get_mnist():
-    try:
-        from tensorflow.keras.datasets import mnist
-    
-        img_rows, img_cols = 28, 28
-        num_classes = 10
-
-        (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-        x = np.concatenate((x_train, x_test))
-        y = np.concatenate((y_train, y_test), axis=0 )
-
-        #if K.image_data_format() == 'channels_first':
-        #    x = x.reshape(x.shape[0], 1, img_rows, img_cols)
-        #    shape = (1, img_rows, img_cols)
-        x = x.reshape(x.shape[0], img_rows, img_cols, 1)
-        x = np.pad(x, ((0,0),(2,2),(2,2),(0,0)), 'constant')
-        shape = (32, 32, 1)
-
-        x = x.astype('float32')
-        x /= 255
-
-        y = tf.keras.utils.to_categorical(y, num_classes)
-
-        return x, y, shape, num_classes
-    except:
-        print("Could not generate MNIST data")
-
 
 def get_z_dataset(N = 1000, sigma=False):
     try:
@@ -66,8 +38,6 @@ def get_z_dataset(N = 1000, sigma=False):
 
 def load_z_dataset():
     try:
-        import pickle
-        import sys
         img, z, _, _, _ = pickle.load(open("../Data/data_coord.pickle","rb"))
         #img, z = pickle.load(open("../Data/databig.pickle","rb"))
 
@@ -106,30 +76,36 @@ def load_z_dataset():
     except:
         print("Could not load galaxy data")
 
+class Scaler():
+    def __init__(self, dims):
+        self.dims = dims
+        self.x_min = np.zeros(self.dims)
+        self.x_max = np.zeros(self.dims)
+        self.y_min = 0
+        self.y_max = 0
+
+    def minmax_img(self, x):
+        for i in range(self.dims):
+            self.x_min[i] = np.min(x[:,:,:,i])
+            self.x_max[i] = np.max(x[:,:,:,i])
+            x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
+        return x
+
+    def minmax_z(self,y):
+        self.y_min = np.min(y)
+        self.y_max = np.max(y)
+        y = (y-self.y_min)/(self.y_max-self.y_min)
+        return y
+
 class Loader():
     def __init__(self, test_per, dat):
         
         self.datasets = {
-            "MNIST": get_mnist(),
             "get_z": get_z_dataset(),
             "load_z": load_z_dataset()}
 
         x, y, self.shape, self.num_out = self.datasets[dat]
         
-        dims = self.shape[-1]
-        self.x_min = np.zeros(dims)
-        self.x_max = np.zeros(dims)
-        #TODO can probably remove the loop
-        for i in range(dims):
-            self.x_min[i] = np.min(x[:,:,:,i])
-            self.x_max[i] = np.max(x[:,:,:,i])
-            x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
-        
-        if dat != "MNIST":
-            self.y_min = np.min(y)
-            self.y_max = np.max(y)
-            y = (y-self.y_min)/(self.y_max-self.y_min)
-
         self.test_per = test_per
         self.x_train, self.x_test, self.y_train, self.y_test = \
             train_test_split(x,y, test_size=self.test_per, random_state=seed)
