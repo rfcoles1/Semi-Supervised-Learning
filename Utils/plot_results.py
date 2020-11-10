@@ -38,6 +38,31 @@ def load_folder(path):
 
     return histories, labels
 
+def show_all_channels(img, resize=True, size=32, scale=True):
+
+    channels = np.shape(img)[-1]
+
+    if resize==True:
+        img = cutimg(img,size)
+
+    fig = plt.figure(figsize=(3.5*channels,3))
+    grid = gs.GridSpec(1,channels)
+
+    for i in range(channels):
+        ax = fig.add_subplot(grid[i])
+
+        min1 = np.min(img[:,:,i])
+        max1 = np.max(img[:,:,i])
+        
+        if scale:
+            ax.imshow(img[:,:,i], vmin=min1, vmax=max1)
+        else:
+            ax.imshow(img[:,:,i])
+
+        ax.axis('off')
+    plt.show()
+ 
+
 def show_aug(img, Augmenter, channel=0, resize=True,size=32,scale=True):
        
     aug = Augmenter.transform(img)
@@ -68,6 +93,38 @@ def show_aug(img, Augmenter, channel=0, resize=True,size=32,scale=True):
     ax2.axis('off')
     plt.show()
         
+def show_aug_all_channels(img, Augmenter, resize=True, size=32, scale=True):
+
+    aug = Augmenter.transform(img)
+    channels = np.shape(img)[-1]
+
+    if resize==True:
+        img = cutimg(img,size)
+        aug = cutimg(aug,size)
+
+    fig = plt.figure(figsize=(3.5*channels,6))
+    grid = gs.GridSpec(2,channels)
+
+    for i in range(channels):
+        ax1 = fig.add_subplot(grid[0,i])
+        ax2 = fig.add_subplot(grid[1,i])
+
+        min1 = np.min(img[:,:,i])
+        max1 = np.max(img[:,:,i])
+        min2 = np.min(aug[:,:,i])
+        max2 = np.min(aug[:,:,i])
+        mini = min(min1, min2)
+        maxi = max(max1, max2)
+        if scale:
+            ax1.imshow(img[:,:,i], vmin=min1, vmax=max1)
+            ax2.imshow(aug[:,:,i], vmin=min1, vmax=max1)
+        else:
+            ax1.imshow(img[:,:,i])
+            ax2.imshow(aug[:,:,i])
+        ax1.axis('off')
+        ax2.axis('off')
+    plt.show()
+ 
 
 def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-4,4]):
 

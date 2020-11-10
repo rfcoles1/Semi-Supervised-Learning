@@ -4,7 +4,7 @@ warnings.filterwarnings('ignore')
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from skimage import transform
+from skimage import transform, exposure
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import rotate
 
@@ -18,9 +18,11 @@ def cutimgs(x, size=32):
 
 
 class Augmenter():
-    def __init__(self, imgsize = 32, N=1, transforms='All', M=[[0,1]]):
+    def __init__(self, imgsize = 32, channels=5, N=1, transforms='All', M=[[0,1]]):
         
         self.imsize = imgsize
+        self.channels = channels
+
         self.N = N #number of transformations
 
         self.func = {
@@ -31,26 +33,31 @@ class Augmenter():
                 transform.AffineTransform(translation=(0, mag))),
             "shear": lambda x, mag: transform.warp(x,\
                 transform.AffineTransform(shear=(mag))),
+            "filter": lambda x, mag: gaussian_filter(x, mag),
             "noise": lambda x, mag: np.clip(x + np.random.normal(0,mag,x.shape),0,1),
             "onenoise": lambda x, mag: self.oneChannelNoise(x, mag),
-            "filter": lambda x, mag: gaussian_filter(x, mag),
             "flatscale": lambda x, mag: self.scaleChannelMaxFlat(x, mag),
-            "noisescale": lambda x, mag: self.scaleChannelMaxNoise(x, mag)}
-            
+            "noisescale": lambda x, mag: self.scaleChannelMaxNoise(x, mag),
+            "removecolour": lambda x, mag: self.removeColours(x,mag),
+            "colourjitter": lambda x, mag: self.colourJitter(x,mag)}
+
         self.ranges = {
                 "rotate": [0,360],
                 "translateX": [0, self.imsize/2],
                 "translateY": [0, self.imsize/2],
                 "shear": [0,1],
+                "filter": [0,1],
                 "noise": [0,1],
                 "onenoise": [0,1],
-                "filter": [0,1],
                 "flatscale": [0, 0.05],
-                "noisescale": [0, 0.05]}
+                "noisescale": [0, 0.05],
+                "removecolour": [0, self.channels],
+                "colourjitter": [0, 1]}
 
         if transforms == 'All':#default then use all functions
-            self.transforms = ['rotate', 'translateX', 'translateY', 'shear',\
-                            'noise', 'onenoise', 'filter', 'flatscale', 'noisescale']
+            self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'filter'\
+                            'noise', 'onenoise', 'flatscale', 'noisescale', \
+                            'removecolour', 'colourjitter']
         else: #specifies some functions
             self.transforms = transforms
 
@@ -58,7 +65,7 @@ class Augmenter():
                 self.ranges = {}
                 for i in range(len(transforms)):
                     self.ranges[transforms[i]] = M[i]
-      
+
     def oneChannelNoise(self, x, mag):
         noise = np.random.normal(0,mag,x.shape)
         dims = np.shape(x)[-1]
@@ -92,6 +99,23 @@ class Augmenter():
 
         return np.clip(x + noise, 0,1)
 
+    def removeColours(self, x, mag):
+        i = int(mag)
+        x_new = np.zeros_like(x)
+        x_new[:,:,i] = x[:,:,i]
+        return x_new
+
+    def colourJitter(self, x, mag):
+        
+        #alter contrast
+        noise = np.ones(np.shape(x))
+        for i in range(self.channels):
+            noise[:,:,i] *= np.random.normal(0,mag)
+        
+        #alter brightness? 
+
+        return np.clip(x,0,1)  
+
     #def transform_set(self,x):
     def __call__(self,x):
         x_aug = np.zeros_like(x)
@@ -119,14 +143,4 @@ class Augmenter():
         operation = self.func[op]
         x = operation(x, M)
         return x
-
-
-def removeX(x,param):
-    x[:, int(param*(self.imsize)): int(param*self.imsize + 1)] = 0
-    return x
-
-def removeY(x,param):
-    x[int(param*self.imsize): int(param*self.imsize + 1), :] = 0
-    return x
-
 

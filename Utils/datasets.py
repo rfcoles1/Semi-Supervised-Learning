@@ -84,12 +84,20 @@ class Scaler():
         self.y_min = 0
         self.y_max = 0
 
-    def minmax_img(self, x):
-        for i in range(self.dims):
-            self.x_min[i] = np.min(x[:,:,:,i])
-            self.x_max[i] = np.max(x[:,:,:,i])
-            x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
+    def minmax_img(self, x, bychannels=True):
+        if bychannels:
+            for i in range(self.dims):
+                self.x_min[i] = np.min(x[:,:,:,i])
+                self.x_max[i] = np.max(x[:,:,:,i])
+                x[:,:,:,i] = (x[:,:,:,i] - self.x_min[i])/(self.x_max[i] - self.x_min[i])
+        else:
+            self.x_min[0] = np.min(x)
+            self.x_max[0] = np.max(x)
+            x = (x-self.x_min[0])/(self.x_max[0]-self.x_min[0])
         return x
+
+    def arcsinh(self, x):
+        return np.arcsinh(x)
 
     def minmax_z(self,y):
         self.y_min = np.min(y)
@@ -105,10 +113,16 @@ class Loader():
             "load_z": load_z_dataset()}
 
         x, y, self.shape, self.num_out = self.datasets[dat]
-        
+
+        self.dims = self.shape[-1]
+        self.scaler = Scaler(self.dims)
+        #x_scaled = self.scaler.arcsinh(x)
+        #x_scaled = self.scaler.minmax_img(x_scaled)
+        y_scaled = self.scaler.minmax_z(y)
+
         self.test_per = test_per
         self.x_train, self.x_test, self.y_train, self.y_test = \
-            train_test_split(x,y, test_size=self.test_per, random_state=seed)
+            train_test_split(x,y_scaled, test_size=self.test_per, random_state=seed)
                     
         self.reset()
 
