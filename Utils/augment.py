@@ -55,7 +55,7 @@ class Augmenter():
                 "colourjitter": [0, 1]}
 
         if transforms == 'All':#default then use all functions
-            self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'filter'\
+            self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'filter',\
                             'noise', 'onenoise', 'flatscale', 'noisescale', \
                             'removecolour', 'colourjitter']
         else: #specifies some functions
