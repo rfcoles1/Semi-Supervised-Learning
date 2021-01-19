@@ -124,9 +124,8 @@ def show_aug_all_channels(img, Augmenter, resize=True, size=32, scale=True):
         ax1.axis('off')
         ax2.axis('off')
     plt.show()
- 
 
-def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-4,4]):
+def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-1,1]):
 
     true = true*(y_max - y_min) + y_min
     pred = pred*(y_max - y_min) + y_min
@@ -166,6 +165,35 @@ def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-4,4]):
     ax1.yaxis.tick_right()
     ax1.yaxis.set_label_position('right')
 
+def plot_error(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-4,4]):
+
+    true = true*(y_max - y_min) + y_min
+    pred = pred*(y_max - y_min) + y_min
+
+    resid = true - pred
+    bias = np.median(resid)
+    std = np.std(resid)
+
+    fig = plt.figure(figsize=(8,6))
+    grid = gs.GridSpec(1,1)
+
+    ax0 = fig.add_subplot(grid[0,0])
+    ax0.scatter(true, resid, color='crimson', alpha=0.5)
+    ax0.plot(xlim, [0,0], color='dimgrey', linestyle='--')
+
+    ax0.set_xlim(xlim[0], xlim[1])
+    ax0.set_ylim(ylim[0], ylim[1])
+    ax0.set_xlabel('Test Value')
+    ax0.set_ylabel('Residual')
+    ax0.grid()
+
+    n, bin_edges = np.histogram(resid, 50)
+    probs = n/np.shape(resid)[0]
+    bin_mid = (bin_edges[1:]+bin_edges[:-1])/2.0
+    bin_wid = bin_edges[1]-bin_edges[0]
+    (mu, sigma) = stats.norm.fit(resid)
+    y = stats.norm.pdf(bin_mid, mu, sigma)*bin_wid
+
 def plot_diff(true, pred, y_min, y_max, xlim=[0.4,3.6]):
 
     true = true*(y_max - y_min) + y_min
@@ -182,8 +210,9 @@ def plot_diff(true, pred, y_min, y_max, xlim=[0.4,3.6]):
     ax0.set_ylim(xlim[0], xlim[1])
     ax0.set_xticks([1,2,3])
     ax0.set_yticks([1,2,3])
-    ax0.set_xlabel('Test Value')
-    ax0.set_ylabel('Predicted Value')
+    ax0.set_xlabel('Test Redshift',fontsize=26)
+    ax0.set_ylabel('Predicted Redshift',fontsize=26)
+    ax0.tick_params(axis='both',labelsize=20)
     ax0.grid()
 
 

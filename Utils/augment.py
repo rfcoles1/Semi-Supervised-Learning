@@ -2,7 +2,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import numpy as np
-import tensorflow as tf
+import copy
+#import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from skimage import transform, exposure
 from scipy.ndimage.filters import gaussian_filter
@@ -17,10 +18,12 @@ def cutimgs(x, size=32):
     return x[:,start:start+size, start:start+size]
 
 
+#Autoencoder currently assumes data is input in [dim1,dim2, channels]
 class Augmenter():
-    def __init__(self, imgsize = 32, channels=5, N=1, transforms='All', M=[[0,1]]):
+    def __init__(self, imgsize = 32, cropsize=32, channels=5, N=1, transforms='All', M=[[0,1]]):
         
-        self.imsize = imgsize
+        self.imsize = imgsize #original image size
+        self.cropsize = cropsize #size of image when cropped
         self.channels = channels
 
         self.N = N #number of transformations
@@ -33,6 +36,7 @@ class Augmenter():
                 transform.AffineTransform(translation=(0, mag))),
             "shear": lambda x, mag: transform.warp(x,\
                 transform.AffineTransform(shear=(mag))),
+            "cutout": lambda x, mag: self.cutout(x, mag),
             "filter": lambda x, mag: gaussian_filter(x, mag),
             "noise": lambda x, mag: np.clip(x + np.random.normal(0,mag,x.shape),0,1),
             "onenoise": lambda x, mag: self.oneChannelNoise(x, mag),
@@ -46,6 +50,7 @@ class Augmenter():
                 "translateX": [0, self.imsize/2],
                 "translateY": [0, self.imsize/2],
                 "shear": [0,1],
+                "cutout": [1, self.cropsize/2], 
                 "filter": [0,1],
                 "noise": [0,1],
                 "onenoise": [0,1],
@@ -55,8 +60,8 @@ class Augmenter():
                 "colourjitter": [0, 1]}
 
         if transforms == 'All':#default then use all functions
-            self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'filter',\
-                            'noise', 'onenoise', 'flatscale', 'noisescale', \
+            self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'cutout', \
+                            'filter', 'noise', 'onenoise', 'flatscale', 'noisescale', \
                             'removecolour', 'colourjitter']
         else: #specifies some functions
             self.transforms = transforms
@@ -65,6 +70,16 @@ class Augmenter():
                 self.ranges = {}
                 for i in range(len(transforms)):
                     self.ranges[transforms[i]] = M[i]
+
+    def cutout(self, x, mag):
+        size = int(np.ceil(mag))
+        edge = (self.imsize - self.cropsize)/2
+        posx = np.random.randint(edge, edge+self.cropsize-size)
+        posy = np.random.randint(edge, edge+self.cropsize-size)
+        
+        out = copy.deepcopy(x)
+        out[posx:posx+size, posy:posy+size,:] = 0
+        return out
 
     def oneChannelNoise(self, x, mag):
         noise = np.random.normal(0,mag,x.shape)
@@ -113,7 +128,6 @@ class Augmenter():
             noise[:,:,i] *= np.random.normal(0,mag)
         
         #alter brightness? 
-
         return np.clip(x,0,1)  
 
     #def transform_set(self,x):
