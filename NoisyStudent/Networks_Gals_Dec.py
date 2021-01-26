@@ -100,7 +100,36 @@ class AutoEnc(Network):
                 print('Regression Loss %f' % np.mean(reglosses))
                 print('Reconstruction Loss %f' % np.mean(reconlosses))
 
+                self.losses['epochs'].append(self.curr_epoch)
+                self.losses['regloss'].append(np.mean(reglosses))
+                self.losees['reconloss'].append(np.mean(reconlosses))
                 
+                reglosses = np.zeros(self.checkpoint)
+                reconlosses = np.zeros(self.checkpoint)
 
+                self.save()
+                
             it += 1
- 
+
+    def predict_enc(self, x_test):
+        preds = self.Enc.predict(x_test, batch_size=self.batch_size, verbose=0)
+        return preds
+
+    def predict_ae(self, x_test):
+        preds = self.Dec.predict(x_test, batch_size=self.batch_size, verbose=0)
+        return preds
+
+    def save(self, path):
+        f = open(self.dirpath + path + '.pickle', 'wb')
+        pickle.dump(self.hist,f)
+        f.close()
+        self.Enc.save_weights(self.dirpath + path + '_enc.h5')
+        self.Dec.save_weights(self.dirpath + path + '_dec.h5')
+
+    def load(self, path):
+        f = open(self.dirpath + path '.pickle', 'rb')
+        self.hist = pickle.load(f)
+        f.close()
+        self.Enc.load_weights(self.dirpath + path + '.h5')
+        self.Dec.load_weights(self.dirpath + path + '.h5')
+        self.curr_epoch = self.hist['epochs'][-1][-1]
