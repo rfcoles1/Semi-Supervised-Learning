@@ -1,4 +1,3 @@
-
 from Networks import *
 
 sys.path.insert(1, '../Utils')
@@ -17,11 +16,11 @@ class Network_z(Network):
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        self.lr = 0.0001
+        
+        lr = 0.0001
+        optimizer = keras.optimizers.Adam(lr=lr)            
 
-        optimizer = keras.optimizers.Adam(lr=self.lr)            
-
-        self.inp = layers.Input(input_shape)
+        self.inp = layers.Input(self.input_shape)
         if noise==True:
             self.Net = tf.keras.models.Model(self.inp, self.tf_resnet_noise(self.inp))
         else:
@@ -40,8 +39,9 @@ class Network_z(Network):
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
 
-        x = layers.Dense(256,activation=layers.LeakyReLU(alpha=0.1))(x)
-        x = layers.Dense(128,activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dense(128, activation = 'relu')(x)
         x = layers.Dense(1)(x)
 
         return x
@@ -54,6 +54,7 @@ class Network_z(Network):
         x = layers.GlobalAveragePooling2D()(x)
 
         x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dropout(0.5)(x)
         x = layers.Dense(256, activation = 'relu')(x)
         x = layers.Dropout(0.5)(x)
         x = layers.Dense(128, activation = 'relu')(x)
