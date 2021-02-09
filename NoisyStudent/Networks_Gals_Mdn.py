@@ -1,11 +1,45 @@
-
 from Networks import *
+
+import tensorflow_probability as tfp
+tfd = tfp.distributions
+tfpl = tfp.layers
 
 sys.path.insert(1, '../Utils')
 from metrics import *
 from datasets import *
 from augment import *
-        
+
+NUM_ = 5
+
+def mdn_loss(y_true, y_pred):
+    out_mu, out_sigma, out_pi = tf.split(y_pred,\
+        num_or_size_splits=[NUM_, NUM_, NUM_], axis=-1)
+    mus = tf.split(out_mu, num_or_size_splits=NUM_, axis=1)
+    sigs = tf.split(out_sigma, num_or_size_splits=NUM_, axis=1)
+    cat = tfd.Categorical(logits=out_pi)
+    coll = [tfd.MultivariateNormalDiag(loc=loc,scale_diag=scale) \
+        for loc, scale in zip(mus, sigs)]
+    mixture = tfd.Mixture(cat=cat, components=coll)
+
+    loss = mixture.log_prob(y_true)
+    loss = tf.negative(loss)
+    return tf.reduce_mean(loss)
+
+def elu_plus(x):
+    return K.elu(x) + 1 + 1e-6
+
+def get_mix(y_pred):
+    out_mu, out_sigma, out_pi = tf.split(y_pred,\
+        num_or_size_splits=[NUM_, NUM_, NUM_], axis=-1)
+    mus = tf.split(out_mu, num_or_size_splits=NUM_, axis=1)
+    sigs = tf.split(out_sigma, num_or_size_splits=NUM_, axis=1)
+    cat = tfd.Categorical(logits=out_pi)
+    coll = [tfd.MultivariateNormalDiag(loc=loc,scale_diag=scale) \
+        for loc, scale in zip(mus, sigs)]
+    mixture = tfd.Mixture(cat=cat, components=coll)
+    
+    return mixture
+
 class MDN(Network):
     def __init__(self, input_shape, noise=False):
         super().__init__()
@@ -17,51 +51,49 @@ class MDN(Network):
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        self.num_mixtures = 20
-        self.lr = 0.0001
-        self.checkpoint = 1
-        self.optimizer = keras.optimizers.Adam(lr=self.lr)            
+        self.num_mixtures = NUM_
+
+        lr = 1e-6
+        optimizer = keras.optimizers.Adam(lr=lr)            
 
         self.inp = layers.Input(self.input_shape)
-        self.mdn = tf.keras.models.Model(self.inp, self.tf_resnet_mdn(self.inp))
+        self.Net = tf.keras.models.Model(self.inp, self.network_mdn(self.inp))
+        self.Net.compile(loss = mdn_loss,  optimizer=optimizer)
 
-   
-    def tf_resnet_mdn(self,x):
+
+    def network_mdn(self,x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         base_model.trainable = True
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
 
-        x = layers.Dense(256,activation='relu')(x)
-        x = layers.Dense(128,activation='relu')(x)
-        mu = layers.Dense(self.num_mixtures)(x)
+        x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dense(128, activation = 'relu')(x)
+        
+        mus = layers.Dense(self.num_mixtures, name='mus')(x)
 
-        #std must be greater than 0,
-        #try exp, softplus, or elu + 1
-        var = layers.Dense(self.num_mixtures, activation='softplus')(x)
+        #std must be greater than 0, #try exp, softplus, or elu + 1
+        sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(x)
 
         #mixture coefficients must sum to 1, therefore use softmax
-        pi = layers.Dense(self.num_mixtures, activation='softmax')(x)
+        pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(x)
+        
+        mdn_out = layers.Concatenate(name='outputs')([mus,sigmas,pis])
+        return mdn_out
 
-        return [mu,var,pi]
+    def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
+        batch_hist = LossHistory()
 
-    def train_step(self, x_train, y_train):
-        with tf.GradientTape() as tape:
-            mu_, var_, pi_ = self.mdn(x_train, training=True)
-            loss = calc_loss(y_train, pi_, mu_, var_)
-        gradients = tape.gradient(loss, self.mdn.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.mdn.trainable_variables))
-        return loss
+        History = self.Net.fit(x_train, y_train,
+                batch_size=self.batch_size,
+                epochs=epochs,
+                verbose=verbose,
+                validation_data=(x_test,y_test),
+                callbacks=[batch_hist])
 
-    def train(self, dataset, epochs):
-        for i in range(epochs):
-            for x_train, y_train in dataset:
-                loss = self.train_step(x_train, y_train)
-            
-            if i % self.checkpoint == 0:
-                print(loss)
-
+"""
 def calc_pdf(y, mu, var):
     val = tf.subtract(y, mu)**2
     val = tf.math.exp((-1 * val)/(2 * var)) / tf.math.sqrt(2*np.pi*var)
@@ -83,3 +115,4 @@ def sample_predictions(pi_vals, mu_vals, var_vals, samples=10):
             idx = np.random.choice(range(k), p=pi_vals[i])
             out[i,j] = np.random.normal(mu_vals[i, idx], np.sqrt(var_vals[i, idx]))
     return out
+"""
