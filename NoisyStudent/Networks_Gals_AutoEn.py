@@ -42,7 +42,8 @@ class AutoEnc(Network):
         #self.Net.add_loss(recon_loss)
         
         self.Net.compile(optimizer=optimizer, \
-            loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE})
+                loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
+                metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
 
 
     def encoder(self,y):
@@ -75,27 +76,41 @@ class AutoEnc(Network):
         return y
 
     def regressor(self,x):
+        y = layers.Dense(128)(x)
         y = layers.Dense(1)(x)
         return y
     
-   
-    def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
+    
+    def train(self, x_train, x_train_aug, y_train, x_test, x_test_aug, y_test, epochs, verbose=2):
         batch_hist = LossHistory()
 
-        History = self.Net.fit(x_train, {'regressor': y_train, 'decoder': x_train},
+        History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
             batch_size=self.batch_size,
             epochs=epochs,
             verbose=verbose,
-            validation_data=(x_test, {'regressor': y_test, 'decoder': x_test}),
+            validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
             callbacks=[batch_hist])
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
-        iterations = np.ceil(np.shape(x_trian)[0]/self.batch_size)
+        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
+        
+        self.hist['train_MSE'].append(History.history['regressor_loss'])
+        self.hist['train_abs_bias'].append(History.history['regressor_abs_bias_loss'])
+        self.hist['train_MAD_bias'].append(History.history['regressor_MAD_loss'])
+        self.hist['train_bias_MAD_loss'].append(History.history['regressor_bias_MAD_loss'])
+        self.hist['train_recon_loss'].append(History.history['decoder_loss'])
+        
+        self.hist['test_MSE'].append(History.history['val_regressor_loss'])
+        self.hist['test_abs_bias'].append(History.history['val_regressor_abs_bias_loss'])
+        self.hist['test_MAD_bias'].append(History.history['val_regressor_MAD_loss'])
+        self.hist['test_bias_MAD_loss'].append(History.history['val_regressor_bias_MAD_loss'])
+        self.hist['test_recon_loss'].append(History.history['val_decoder_loss'])
 
-    
+        self.curr_epoch += epochs
+
     def predict(self, x_test):
         preds = self.Net.predict(x_test, batch_size=self.batch_size, verbose=0)
         return preds
