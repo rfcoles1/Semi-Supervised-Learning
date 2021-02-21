@@ -19,10 +19,10 @@ class AutoEnc(Network):
         self.num_z = 128
         self.checkpoint = 1
         
-        self.enc_lr = 1e-6
-        self.dec_lr = 1e-6
-        enc_optimizer = keras.optimizers.Adam(lr=self.enc_lr)            
-        dec_optimizer = keras.optimizers.Adam(lr=self.dec_lr)
+        enc_lr = 1e-6
+        dec_lr = 1e-6
+        enc_optimizer = keras.optimizers.Adam(lr=enc_lr)            
+        dec_optimizer = keras.optimizers.Adam(lr=dec_lr)
         
         self.inp = layers.Input(input_shape, name='ae_input')
         self.Enc = tf.keras.models.Model(self.inp, \
@@ -43,10 +43,10 @@ class AutoEnc(Network):
         model_out = base_model(y, training=True)
         model_out = layers.GlobalAveragePooling2D()(model_out)
         
-        x = layers.Dense(512,activation=layers.LeakyReLU(alpha=0.1))(model_out)
-        x = layers.Dense(256,activation=layers.LeakyReLU(alpha=0.1))(x)
-
-        #can probably do this in one layer
+        x = layers.Dense(512, activation = 'relu')(model_out)
+        x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dense(128, activation = 'relu')(x)
+        
         x_out = layers.Dense(self.num_out)(x)
         z_out = layers.Dense(self.num_z)(x)
         
@@ -57,8 +57,8 @@ class AutoEnc(Network):
         #These layers assume a shape (32x32x5)
 
         y = layers.Dense(self.num_z + self.num_out)(z)
-        y = layers.Dense(256,activation=layers.LeakyReLU(alpha=0.1))(y)
-        y = layers.Dense(512,activation=layers.LeakyReLU(alpha=0.1))(y)
+        y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dense(512, activation = 'relu')(y)
         y = layers.Dense(8192)(y)
         y = layers.Reshape([2,2,2048])(y)
 
@@ -127,9 +127,9 @@ class AutoEnc(Network):
         self.Dec.save_weights(self.dirpath + path + '_dec.h5')
 
     def load(self, path):
-        f = open(self.dirpath + path '.pickle', 'rb')
+        f = open(self.dirpath + path + '.pickle', 'rb')
         self.hist = pickle.load(f)
         f.close()
-        self.Enc.load_weights(self.dirpath + path + '.h5')
-        self.Dec.load_weights(self.dirpath + path + '.h5')
+        self.Enc.load_weights(self.dirpath + path + '_enc.h5')
+        self.Dec.load_weights(self.dirpath + path + '_dec.h5')
         self.curr_epoch = self.hist['epochs'][-1][-1]
