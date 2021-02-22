@@ -6,7 +6,7 @@ from datasets import *
 from augment import *
         
 class AutoEnc(Network):
-    def __init__(self, input_shape, noise=False):
+    def __init__(self, input_shape, skip=False):
         super().__init__()
   
         self.dirpath = 'records_z/'
@@ -27,9 +27,13 @@ class AutoEnc(Network):
             self.encoder(Enc_inp), name='encoder')
        
         Dec_inp = layers.Input(shape=(self.num_z), name='decoder_input')
-        self.Dec = tf.keras.models.Model(Dec_inp, \
-            self.decoder(Dec_inp), name='decoder')
-        
+        if skip==True:   
+            self.Dec = tf.keras.models.Model(Dec_inp, \
+                self.decoder_skip(Dec_inp), name='decoder')
+        else:
+            self.Dec = tf.keras.models.Model(Dec_inp, \
+                self.decoder(Dec_inp), name='decoder')
+
         Reg_inp = layers.Input(shape=(self.num_z), name='regressor_input')
         self.Reg = tf.keras.models.Model(Reg_inp, \
             self.regressor(Reg_inp), name='regressor')
@@ -60,19 +64,39 @@ class AutoEnc(Network):
         z_out = layers.Dense(self.num_z)(x)
         return z_out
 
-
     def decoder(self,x):
         y = layers.Dense(self.num_z)(x)
         y = layers.Dense(256, activation = 'relu')(y)
         y = layers.Dense(512, activation = 'relu')(y)
         y = layers.Dense(8192)(y)
         y = layers.Reshape([2,2,2048])(y)
-        
+       
         y = layers.Conv2DTranspose(512,3)(y)
         y = layers.Conv2DTranspose(128,5)(y)
         y = layers.Conv2DTranspose(64,9)(y)
         y = layers.Conv2DTranspose(5,17)(y)
-        
+        return y
+
+    def decoder_skip(self,x):
+        y = layers.Dense(self.num_z)(x)
+        y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dense(512, activation = 'relu')(y)
+        y = layers.Dense(8192)(y)
+        y = layers.Reshape([2,2,2048])(y)
+       
+        skip = y
+        y = layers.Conv2DTranspose(512,3)(y)
+        y = layers.Add()([layers.Reshape([4,4,512])(skip), y])
+
+        y = layers.Conv2DTranspose(128,5)(y)
+        y = layers.Add()([layers.Reshape([8,8,128])(skip), y])
+
+        y = layers.Conv2DTranspose(32,9)(y)
+        y = layers.Add()([layers.Reshape([16,16,32])(skip), y])
+
+        y = layers.Conv2DTranspose(5,17)(y)
+        skip_conv = layers.Conv2DTranspose(5,31)(skip)
+        y = layers.Add()([skip_conv, y])
         return y
 
     def regressor(self,x):
