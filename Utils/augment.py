@@ -43,6 +43,7 @@ class Augmenter():
             "flatscale": lambda x, mag: self.scaleChannelMaxFlat(x, mag),
             "noisescale": lambda x, mag: self.scaleChannelMaxNoise(x, mag),
             "removecolour": lambda x, mag: self.removeColours(x,mag),
+            "removechannel": lambda x, mag: self.removeChannel(x,mag),
             "colourjitter": lambda x, mag: self.colourJitter(x,mag)}
 
         self.ranges = {
@@ -57,12 +58,13 @@ class Augmenter():
                 "flatscale": [0, 0.05],
                 "noisescale": [0, 0.05],
                 "removecolour": [0, self.channels],
+                "removechannel": [0, self.channels],
                 "colourjitter": [0, 1]}
 
         if transforms == 'All':#default then use all functions
             self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'cutout', \
                             'filter', 'noise', 'onenoise', 'flatscale', 'noisescale', \
-                            'removecolour', 'colourjitter']
+                            'removechannel', 'colourjitter']
         else: #specifies some functions
             self.transforms = transforms
 
@@ -118,6 +120,12 @@ class Augmenter():
         i = int(mag)
         x_new = np.zeros_like(x)
         x_new[:,:,i] = x[:,:,i]
+        return x_new
+
+    def removeChannel(self, x, mag):
+        i = int(mag)
+        x_new = copy.deepcopy(x)
+        x_new[:,:,i] = 0
         return x_new
 
     def colourJitter(self, x, mag):
