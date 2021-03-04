@@ -19,3 +19,7 @@ def bias_MAD_loss(y_true, y_pred):
     median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
     return tf.sqrt(tf.reduce_mean(abs(resid))) + 1.4826 * (tf.reduce_mean(abs(resid - median)))
 
+def outliers(y_true, y_pred):
+    resid = (y_true - y_pred)/(1 + y_true)
+    median = tfp.stats.percentile(resid, 50.0, interpolation='midpoint')
+    return sum(np.abs(resid) > (5*MAD))/z_spec.shape[0]
