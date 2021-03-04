@@ -38,6 +38,37 @@ def load_folder(path):
 
     return histories, labels
 
+def _cols_to_channels(cols):
+    n = len(cols)
+    channels = []
+    for i in range(n):
+        c = cols[i]
+        if c == 'u':
+            channels.append(0)
+        if c == 'g':
+            channels.append(1)
+        if c == 'r':
+            channels.append(2)
+        if c == 'i':
+            channels.append(3)
+        if c == 'z':
+            channels.append(4)
+    return channels
+
+def plot_gals(img, cols='ugr'):
+    
+    r,g,b = _cols_to_channels(cols)
+
+    channel1 = img[:,:,r:r+1]
+    channel2 = img[:,:,g:g+1]
+    channel3 = img[:,:,b:b+1]
+
+    image = np.concatenate([channel1, channel2, channel3], axis=2)
+
+    plt.axis('off')
+    plt.imshow(image)
+
+
 def show_all_channels(img, resize=True, size=32, scale=True):
 
     channels = np.shape(img)[-1]
