@@ -9,7 +9,7 @@ class AutoEnc(Network):
     def __init__(self, input_shape, skip=False):
         super().__init__()
   
-        self.dirpath = 'records_z/'
+        self.dirpath = 'records_gals_ae/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
@@ -26,15 +26,12 @@ class AutoEnc(Network):
         self.Enc = tf.keras.models.Model(Enc_inp, \
             self.encoder(Enc_inp), name='encoder')
        
-        Dec_inp = layers.Input(shape=(self.num_z), name='decoder_input')
-        if skip==True:   
-            self.Dec = tf.keras.models.Model(Dec_inp, \
-                self.decoder_skip(Dec_inp), name='decoder')
-        else:
-            self.Dec = tf.keras.models.Model(Dec_inp, \
-                self.decoder(Dec_inp), name='decoder')
+        #need to not hardcode the latent size
+        Dec_inp = layers.Input(shape=(1,1,2048), name='decoder_input')
+        self.Dec = tf.keras.models.Model(Dec_inp, \
+            self.decoder(Dec_inp), name='decoder')
 
-        Reg_inp = layers.Input(shape=(self.num_z), name='regressor_input')
+        Reg_inp = layers.Input(shape=(1,1,2048), name='regressor_input')
         self.Reg = tf.keras.models.Model(Reg_inp, \
             self.regressor(Reg_inp), name='regressor')
 
@@ -54,53 +51,39 @@ class AutoEnc(Network):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         self.base_model.trainabe = True
-        model_out = self.base_model(y, training=True)
-        model_out = layers.GlobalAveragePooling2D()(model_out)
+        z = self.base_model(y, training=True)
         
-        x = layers.Dense(512, activation = 'relu')(model_out)
-        x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dense(128, activation = 'relu')(x)
-        
-        z_out = layers.Dense(self.num_z)(x)
-        return z_out
+        return z
 
-    def decoder(self,x):
-        y = layers.Dense(self.num_z)(x)
-        y = layers.Dense(256, activation = 'relu')(y)
-        y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dense(8192)(y)
-        y = layers.Reshape([2,2,2048])(y)
-       
-        y = layers.Conv2DTranspose(512,3)(y)
-        y = layers.Conv2DTranspose(128,5)(y)
-        y = layers.Conv2DTranspose(64,9)(y)
-        y = layers.Conv2DTranspose(5,17)(y)
-        return y
+    def decoder(self,z):
+        x = layers.Conv2DTranspose(512,4)(z)
+        x = layers.Conv2DTranspose(128,5)(x)
+        x = layers.Conv2DTranspose(64,9)(x)
+        x = layers.Conv2DTranspose(5,17)(x)
+        return x
 
-    def decoder_skip(self,x):
-        y = layers.Dense(self.num_z)(x)
-        y = layers.Dense(256, activation = 'relu')(y)
-        y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dense(8192)(y)
-        y = layers.Reshape([2,2,2048])(y)
-       
-        skip = y
-        y = layers.Conv2DTranspose(512,3)(y)
-        y = layers.Add()([layers.Reshape([4,4,512])(skip), y])
+    def decoder_skip(self,z):
+        skip = z
+        x = layers.Conv2DTranspose(512,4)(z)
+        x = layers.Add()([layers.Reshape([4,4,512])(skip), x])
 
-        y = layers.Conv2DTranspose(128,5)(y)
-        y = layers.Add()([layers.Reshape([8,8,128])(skip), y])
+        x = layers.Conv2DTranspose(128,5)(x)
+        x = layers.Add()([layers.Reshape([8,8,128])(skip), x])
 
-        y = layers.Conv2DTranspose(32,9)(y)
-        y = layers.Add()([layers.Reshape([16,16,32])(skip), y])
+        x = layers.Conv2DTranspose(32,9)(x)
+        x = layers.Add()([layers.Reshape([16,16,32])(skip), x])
 
-        y = layers.Conv2DTranspose(5,17)(y)
+        x = layers.Conv2DTranspose(5,17)(x)
         skip_conv = layers.Conv2DTranspose(5,31)(skip)
-        y = layers.Add()([skip_conv, y])
-        return y
+        x = layers.Add()([skip_conv, x])
+        return x
 
-    def regressor(self,x):
-        y = layers.Dense(128)(x)
+    def regressor(self,z):
+        x = layers.Flatten()(z)
+
+        y = layers.Dense(512, activation = 'relu')(x)
+        y = layers.Dense(256, activation = 'relu')(x)
+        y = layers.Dense(128, activation = 'relu')(x)
         y = layers.Dense(1)(x)
         return y
     
