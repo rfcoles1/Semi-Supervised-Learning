@@ -27,11 +27,11 @@ class AutoEnc(Network):
         self.Enc = tf.keras.models.Model(Enc_inp, \
             self.encoder(Enc_inp), name='encoder')
        
-        Dec_inp = layers.Input(shape=(self.num_z), name='decoder_input')
+        Dec_inp = layers.Input(shape=(1,1,2048), name='decoder_input')
         self.Dec = tf.keras.models.Model(Dec_inp, \
             self.decoder(Dec_inp), name='decoder')
         
-        Reg_inp = layers.Input(shape=(self.num_z), name='regressor_input')
+        Reg_inp = layers.Input(shape=(1,1,2048), name='regressor_input')
         self.Reg = tf.keras.models.Model(Reg_inp, \
             self.regressor(Reg_inp), name='regressor')
 
@@ -50,52 +50,44 @@ class AutoEnc(Network):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         self.base_model.trainabe = True
-        model_out = self.base_model(y, training=True)
-        model_out = layers.GlobalAveragePooling2D()(model_out)
+        z = self.base_model(y, training=True)
         
-        x = layers.Dense(512, activation = 'relu')(model_out)
-        x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dense(128, activation = 'relu')(x)
+        return z
+
+    def decoder(self,z):
+        x = layers.Conv2DTranspose(512,4)(z)
+        x = layers.Conv2DTranspose(128,5)(x)
+        x = layers.Conv2DTranspose(64,9)(x)
+        x = layers.Conv2DTranspose(5,17)(x)
+        return x
+
+    def regressor(self,z):
+        y = layers.Flatten()(z)
         
-        z_out = layers.Dense(self.num_z)(x)
-        return z_out
-
-
-    def decoder(self,x):
-        y = layers.Dense(self.num_z)(x)
-        y = layers.Dense(256, activation = 'relu')(y)
         y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dense(8192)(y)
-        y = layers.Reshape([2,2,2048])(y)
-        
-        y = layers.Conv2DTranspose(512,3)(y)
-        y = layers.Conv2DTranspose(128,5)(y)
-        y = layers.Conv2DTranspose(64,9)(y)
-        y = layers.Conv2DTranspose(5,17)(y)
-        
-        return y
+        y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dense(128, activation = 'relu')(y)
 
-    def regressor(self,x):
-        mus = layers.Dense(self.num_mixtures, name='mus')(x)
-        sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(x)
-        pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(x)
+        mus = layers.Dense(self.num_mixtures, name='mus')(y)
+        sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(y)
+        pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(y)
         
         mdn_out = layers.Concatenate(name='outputs')([mus, sigmas, pis])
         return mdn_out
     
    
-    def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
+    def train(self, x_train, x_train_aug, y_train, x_test, x_test_aug, y_test, epochs, verbose=2):
         batch_hist = LossHistory()
 
-        History = self.Net.fit(x_train, {'regressor': y_train, 'decoder': x_train},
+        History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
             batch_size=self.batch_size,
             epochs=epochs,
             verbose=verbose,
-            validation_data=(x_test, {'regressor': y_test, 'decoder': x_test}),
+            validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
             callbacks=[batch_hist])
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
-        iterations = np.ceil(np.shape(x_trian)[0]/self.batch_size)
+        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
