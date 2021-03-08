@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings('ignore')
+
 import numpy as np
 import pickle 
 import os
@@ -68,6 +71,38 @@ def plot_gals(img, cols='ugr'):
     plt.axis('off')
     plt.imshow(image)
 
+def plot_collection(imgs):
+    n = len(imgs)
+    rows = int(np.ceil(n/3))
+    cols = 3
+
+    fig = plt.figure(figsize=(cols*2, rows*2))
+    grid = gs.GridSpec(rows,cols, wspace=0.05,hspace=0.05)
+
+    for i in range(rows):
+        for j in range(cols):
+            ax1 = fig.add_subplot(grid[i,j])
+            plot_gals(imgs[i*cols+j])
+
+ 
+def compare_images(imgs1, imgs2):
+    n = len(imgs1)
+    rows = int(np.ceil(n/3))
+    cols = 3
+
+    fig = plt.figure(figsize=(cols*4, rows*2))
+    outer = gs.GridSpec(1,2, wspace=0.1)
+    grid1 = gs.GridSpecFromSubplotSpec(rows, cols, subplot_spec=outer[0], wspace=0.05, hspace=0.05)
+    grid2 = gs.GridSpecFromSubplotSpec(rows, cols, subplot_spec=outer[1], wspace=0.05, hspace=0.05)
+
+    for i in range(rows):
+        for j in range(cols):
+            ax1 = fig.add_subplot(grid1[i,j])
+            plot_gals(imgs1[i*cols+j])
+
+            ax2 = fig.add_subplot(grid2[i,j])
+            plot_gals(imgs2[i*cols+j])
+    
 
 def show_all_channels(img, resize=True, size=32, scale=True):
 
