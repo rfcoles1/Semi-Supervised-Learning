@@ -86,7 +86,6 @@ class Loader():
     def __init__(self, test_per, dat):
         
         self.datasets = {
-            "get_z": get_z_dataset(),
             "load_z": load_z_dataset()}
 
         x, y, self.shape, self.num_out = self.datasets[dat]
