@@ -6,35 +6,12 @@ import numpy as np
 import pickle
 
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 from skimage import transform
 from scipy.ndimage.filters import gaussian_filter
 
 seed = 0
 np.random.seed(seed)
-
-def get_z_dataset(N = 1000, sigma=False):
-    try:
-        from dynamicDataLoader import Dynamic_dataloader_subaru_params
-
-        dataset_loader = torch.utils.data.DataLoader(Dynamic_dataloader_subaru_params(\
-            transforms.Normalize(mean=(0.0598,0.0123,0.0207,0.0311,0.0403),\
-            std=(1.01,0.0909,0.193,0.357,0.552)),cut_size=16), \
-            batch_size=N, shuffle=True, num_workers=1, pin_memory=True)
-
-        img,z,sigma = next(iter(dataset_loader))
-        img = np.transpose(img.numpy(),(0,3,1,2))
-    
-        if sigma:
-            params = np.hstack([z.numpy(), sigma.numpy()])
-            out_size = 2
-        else:
-            params = z.numpy()
-            out_size = 1
-
-        return img, params, np.shape(img[0]), out_size
-    except:
-        print("Could not generate galaxy data")
-
 
 def load_z_dataset():
     try:
