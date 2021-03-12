@@ -7,20 +7,19 @@ from augment import *
 from mdn_utils import *
 
 class AutoEnc(Network):
-    def __init__(self, input_shape, noise=False):
+    def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_z/'
+        self.dirpath = 'records_gals_an_mdn/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        self.num_z = 128
-        self.num_mixtures = 5
+        self.num_mixtures = 3
         
-        lr = 1e-6
+        lr = 1e-4
         optimizer = keras.optimizers.Adam(lr=lr)            
 
         Enc_inp = layers.Input(input_shape, name='encoder_input')

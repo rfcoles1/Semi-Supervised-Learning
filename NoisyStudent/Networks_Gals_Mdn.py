@@ -8,10 +8,10 @@ from mdn_utils import *
 
 
 class MDN(Network):
-    def __init__(self, input_shape, noise=False):
+    def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_z/'
+        self.dirpath = 'records_gals_mdn/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
@@ -20,7 +20,7 @@ class MDN(Network):
         self.num_out = 1
         self.num_mixtures = 3 
 
-        lr = 1e-6
+        lr = 1e-4
         optimizer = keras.optimizers.Adam(lr=lr)            
 
         self.inp = layers.Input(self.input_shape)
@@ -40,10 +40,8 @@ class MDN(Network):
         x = layers.Dense(128, activation = 'relu', name='latent')(x)
         
         mus = layers.Dense(self.num_mixtures, name='mus')(x)
-
         #std must be greater than 0, #try exp, softplus, or elu + 1
         sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(x)
-
         #mixture coefficients must sum to 1, therefore use softmax
         pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(x)
         

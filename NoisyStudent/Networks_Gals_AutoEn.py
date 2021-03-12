@@ -16,7 +16,6 @@ class AutoEnc(Network):
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        self.checkpoint = 1
 
         lr = 1e-4
         optimizer = keras.optimizers.Adam(lr=lr)            
@@ -48,7 +47,6 @@ class AutoEnc(Network):
             input_shape=self.input_shape)
         self.base_model.trainabe = True
         z = self.base_model(y, training=True)
-        
         return z
 
     def decoder(self,z):

@@ -9,7 +9,7 @@ class Network_z(Network):
     def __init__(self, input_shape, noise=False):
         super().__init__()
   
-        self.dirpath = 'records_z/'
+        self.dirpath = 'records_gals/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
@@ -17,7 +17,7 @@ class Network_z(Network):
         self.input_shape = input_shape
         self.num_out = 1
         
-        lr = 0.0001
+        lr = 1e-4
         optimizer = keras.optimizers.Adam(lr=lr)            
 
         self.inp = layers.Input(self.input_shape)
@@ -39,9 +39,12 @@ class Network_z(Network):
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
 
-        x = layers.Dense(512, activation = 'relu')(x)
-        x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dense(128, activation = 'relu')(x)
+        #x = layers.Dense(512, activation = 'relu')(x)
+        #x = layers.Dense(256, activation = 'relu')(x)
+        #x = layers.Dense(128, activation = 'relu')(x)
+        x = layers.Dense(512,activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(256,activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(128,activation=layers.LeakyReLU(alpha=0.1))(x)
         x = layers.Dense(1)(x)
 
         return x
