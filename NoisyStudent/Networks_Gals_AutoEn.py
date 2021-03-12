@@ -6,7 +6,7 @@ from datasets import *
 from augment import *
         
 class AutoEnc(Network):
-    def __init__(self, input_shape, skip=False):
+    def __init__(self, input_shape):
         super().__init__()
   
         self.dirpath = 'records_gals_ae/'
@@ -16,10 +16,9 @@ class AutoEnc(Network):
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        self.num_z = 128
         self.checkpoint = 1
 
-        lr = 1e-6
+        lr = 1e-4
         optimizer = keras.optimizers.Adam(lr=lr)            
 
         Enc_inp = layers.Input(input_shape, name='encoder_input')
@@ -38,9 +37,6 @@ class AutoEnc(Network):
         outputs = [self.Dec(self.Enc(Enc_inp)), self.Reg(self.Enc(Enc_inp))]
         self.Net = tf.keras.models.Model(inputs=Enc_inp,\
             outputs=outputs)
-        
-        #recon_loss = tf.keras.losses.MSE(Enc_inp, outputs[0])
-        #self.Net.add_loss(recon_loss)
         
         self.Net.compile(optimizer=optimizer, \
                 loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\

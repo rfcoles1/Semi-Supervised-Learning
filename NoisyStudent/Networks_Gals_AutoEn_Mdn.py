@@ -39,9 +39,6 @@ class AutoEnc(Network):
         self.Net = tf.keras.models.Model(inputs=Enc_inp,\
             outputs=outputs)
         
-        #recon_loss = tf.keras.losses.MSE(Enc_inp, outputs[0])
-        #self.Net.add_loss(recon_loss)
-        
         self.Net.compile(optimizer=optimizer, \
             loss={'regressor': mdn_loss(self.num_mixtures), 'decoder': tf.keras.losses.MSE})
 
@@ -49,9 +46,8 @@ class AutoEnc(Network):
     def encoder(self,y):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
-        self.base_model.trainabe = True
+        self.base_model.trainable = True
         z = self.base_model(y, training=True)
-        
         return z
 
     def decoder(self,z):
