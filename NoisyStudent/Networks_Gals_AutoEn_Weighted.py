@@ -4,12 +4,16 @@ sys.path.insert(1, '../Utils')
 from metrics import *
 from datasets import *
 from augment import *
-        
+from ae_utils import *
+
+from tensorflow.python.framework.ops import disable_eager_execution
+disable_eager_execution()
+
 class AutoEnc(Network):
     def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_gals_ae/'
+        self.dirpath = 'records_gals_ae_weighted/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
@@ -21,6 +25,7 @@ class AutoEnc(Network):
         optimizer = keras.optimizers.Adam(lr=lr)            
 
         Enc_inp = layers.Input(input_shape, name='encoder_input')
+        Weight_inp = layers.Input(input_shape, name='weight_input')
         self.Enc = tf.keras.models.Model(Enc_inp, \
             self.encoder(Enc_inp), name='encoder')
        
@@ -34,11 +39,11 @@ class AutoEnc(Network):
             self.regressor(Reg_inp), name='regressor')
 
         outputs = [self.Dec(self.Enc(Enc_inp)), self.Reg(self.Enc(Enc_inp))]
-        self.Net = tf.keras.models.Model(inputs=Enc_inp,\
+        self.Net = tf.keras.models.Model(inputs=[Enc_inp, Weight_inp],\
             outputs=outputs)
         
         self.Net.compile(optimizer=optimizer, \
-                loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
+                loss={'regressor': tf.keras.losses.MSE, 'decoder': weighted_recon_loss(Weight_inp)},\
                 metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
 
 
@@ -47,6 +52,7 @@ class AutoEnc(Network):
             input_shape=self.input_shape)
         self.base_model.trainabe = True
         z = self.base_model(y, training=True)
+        
         return z
 
     def decoder(self,z):
@@ -82,15 +88,15 @@ class AutoEnc(Network):
         return y
     
     
-    def train(self, x_train, x_train_aug, y_train, \
-            x_test, x_test_aug, y_test, epochs, verbose=2):
+    def train(self, x_train, train_weights, x_train_aug, y_train, \
+            x_test, test_weights, x_test_aug, y_test, epochs, verbose=2):
         batch_hist = LossHistory()
 
-        History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
+        History = self.Net.fit([x_train, train_weights], {'regressor': y_train, 'decoder': x_train},
             batch_size=self.batch_size,
             epochs=epochs,
             verbose=verbose,
-            validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
+            validation_data=([x_test, test_weights], {'regressor': y_test, 'decoder': x_test}),
             callbacks=[batch_hist])
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
