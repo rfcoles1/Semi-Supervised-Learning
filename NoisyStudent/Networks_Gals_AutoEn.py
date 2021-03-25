@@ -39,6 +39,7 @@ class AutoEnc(Network):
         
         self.Net.compile(optimizer=optimizer, \
                 loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
+                loss_weights=[1,1],\
                 metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
 
 
@@ -54,22 +55,6 @@ class AutoEnc(Network):
         x = layers.Conv2DTranspose(128,5)(x)
         x = layers.Conv2DTranspose(64,9)(x)
         x = layers.Conv2DTranspose(5,17)(x)
-        return x
-
-    def decoder_skip(self,z):
-        skip = z
-        x = layers.Conv2DTranspose(512,4)(z)
-        x = layers.Add()([layers.Reshape([4,4,512])(skip), x])
-
-        x = layers.Conv2DTranspose(128,5)(x)
-        x = layers.Add()([layers.Reshape([8,8,128])(skip), x])
-
-        x = layers.Conv2DTranspose(32,9)(x)
-        x = layers.Add()([layers.Reshape([16,16,32])(skip), x])
-
-        x = layers.Conv2DTranspose(5,17)(x)
-        skip_conv = layers.Conv2DTranspose(5,31)(skip)
-        x = layers.Add()([skip_conv, x])
         return x
 
     def regressor(self,z):
