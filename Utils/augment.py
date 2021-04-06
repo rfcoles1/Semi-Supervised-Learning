@@ -29,16 +29,12 @@ class Augmenter():
         self.N = N #number of transformations
 
         self.func = {
-            "rotate": lambda x, mag: rotate(x, mag, axes=(0,1), reshape=False),
-            "translateX": lambda x, mag: transform.warp(x,\
-                transform.AffineTransform(translation=(mag, 0))),
-            "translateY": lambda x, mag: transform.warp(x,\
-                transform.AffineTransform(translation=(0, mag))),
-            "shear": lambda x, mag: transform.warp(x,\
-                transform.AffineTransform(shear=(mag))),
+            "rotate": lambda x, mag: self.rotate(x,mag),
+            "translate": lambda x, mag: self.translate(x,mag),
+            "shear": lambda x, mag: self.shear(x,mag),
             "cutout": lambda x, mag: self.cutout(x, mag),
-            "filter": lambda x, mag: gaussian_filter(x, mag),
-            "noise": lambda x, mag: np.clip(x + np.random.normal(0,mag,x.shape),0,1),
+            "filter": lambda x, mag: self.filter(x, mag),
+            "noise": lambda x, mag: self.noise(x, mag),
             "onenoise": lambda x, mag: self.oneChannelNoise(x, mag),
             "flatscale": lambda x, mag: self.scaleChannelMaxFlat(x, mag),
             "noisescale": lambda x, mag: self.scaleChannelMaxNoise(x, mag),
@@ -48,30 +44,48 @@ class Augmenter():
 
         self.ranges = {
                 "rotate": [0,360],
-                "translateX": [0, self.imsize/2],
-                "translateY": [0, self.imsize/2],
-                "shear": [0,1],
+                "translate": [0, self.imsize/4],
+                "shear": [0,0.1],
                 "cutout": [1, self.cropsize/2], 
                 "filter": [0,1],
                 "noise": [0,1],
                 "onenoise": [0,1],
                 "flatscale": [0, 0.05],
                 "noisescale": [0, 0.05],
-                "removecolour": [0, self.channels],
-                "removechannel": [0, self.channels],
+                "removechannel": [0, 1],
                 "colourjitter": [0, 1]}
 
-        if transforms == 'All':#default then use all functions
-            self.transforms = ['rotate', 'translateX', 'translateY', 'shear', 'cutout', \
-                            'filter', 'noise', 'onenoise', 'flatscale', 'noisescale', \
-                            'removechannel', 'colourjitter']
-        else: #specifies some functions
+        if transforms == 'All':#default, use all functions
+            self.transforms = ['rotate', 'shear', 'translate', 'cutout', \
+                            'removechannel', 'colourjitter', 'filter', \
+                             'noise', 'onenoise', 'flatscale', 'noisescale']
+        else: #if select functions have been specified
             self.transforms = transforms
 
             if len(transforms)==len(M):#if the correct number of ranges are also specificed
                 self.ranges = {}
                 for i in range(len(transforms)):
                     self.ranges[transforms[i]] = M[i]
+    
+    def rotate(self, x, mag):
+        x_new = transform.rotate(x, mag)
+        return x_new
+        
+    def translate(self, x, mag):
+        i = int(np.random.randint(0,4))
+        if i == 0:
+            x_new = transform.warp(x, transform.AffineTransform(translation=(mag, 0)))
+        if i == 1:
+            x_new = transform.warp(x, transform.AffineTransform(translation=(-mag, 0)))
+        if i == 2:
+            x_new = transform.warp(x, transform.AffineTransform(translation=(0, mag)))
+        if i == 3:
+            x_new = transform.warp(x, transform.AffineTransform(translation=(0, -mag)))
+        return x_new
+
+    def shear(self, x, mag):
+        x_new = transform.warp(x, transform.AffineTransform(shear=(mag)))
+        return x_new
 
     def cutout(self, x, mag):
         size = int(np.ceil(mag))
@@ -82,6 +96,37 @@ class Augmenter():
         out = copy.deepcopy(x)
         out[posx:posx+size, posy:posy+size,:] = 0
         return out
+
+    def removeChannel(self, x, mag):
+        n = int(np.ceil(mag))
+        channels_removed = np.random.choice(np.arange(0,self.channels), n)
+        print(mag, n, channels_removed) 
+        x_new = copy.deepcopy(x)
+        x_new[:,:,channels_removed] = 0
+        return x_new
+
+    def colourJitter(self, x, mag):
+        #placeholder
+
+        x_new = copy.deepcopy(x)
+        
+        #alter contrast
+        noise = np.ones(np.shape(x))
+        for i in range(self.channels):
+            noise[:,:,i] *= np.random.normal(0,mag)
+        
+        #alter brightness
+
+        return np.clip(x_new,0,1)  
+
+    def filter(self, x, mag):
+        x_new = gaussian_filter(x, mag)
+        return x_new
+
+    def noise(self, x, mag):
+        x_new = copy.deepcopy(x)
+        x_new = np.clip(x_new + np.random.normal(0,mag,x.shape),0,1)
+        return x_new
 
     def oneChannelNoise(self, x, mag):
         noise = np.random.normal(0,mag,x.shape)
@@ -115,28 +160,6 @@ class Augmenter():
             noise[:,:,i] = np.random.normal(0,mag*thismax, shape)
 
         return np.clip(x + noise, 0,1)
-
-    def removeColours(self, x, mag):
-        i = int(mag)
-        x_new = np.zeros_like(x)
-        x_new[:,:,i] = x[:,:,i]
-        return x_new
-
-    def removeChannel(self, x, mag):
-        i = int(mag)
-        x_new = copy.deepcopy(x)
-        x_new[:,:,i] = 0
-        return x_new
-
-    def colourJitter(self, x, mag):
-        
-        #alter contrast
-        noise = np.ones(np.shape(x))
-        for i in range(self.channels):
-            noise[:,:,i] *= np.random.normal(0,mag)
-        
-        #alter brightness? 
-        return np.clip(x,0,1)  
 
     #def transform_set(self,x):
     def __call__(self,x):

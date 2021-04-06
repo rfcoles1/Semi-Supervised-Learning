@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gs
 import scipy.stats as stats
 from scipy.signal import savgol_filter
+from astropy.visualization import make_lupton_rgb
 
 big = 32
 med = 24
@@ -41,6 +42,7 @@ def load_folder(path):
 
     return histories, labels
 
+
 def _cols_to_channels(cols):
     n = len(cols)
     channels = []
@@ -58,10 +60,7 @@ def _cols_to_channels(cols):
             channels.append(4)
     return channels
 
-def plot_gals(img, cols='ugr'):
-    
-    r,g,b = _cols_to_channels(cols)
-
+def plot_colour(img, r=1,g=2,b=3):
     channel1 = img[:,:,r:r+1]
     channel2 = img[:,:,g:g+1]
     channel3 = img[:,:,b:b+1]
@@ -70,6 +69,16 @@ def plot_gals(img, cols='ugr'):
 
     plt.axis('off')
     plt.imshow(image)
+
+def plot_lupton(img):
+    g = img[:,:,1:2]
+    r = img[:,:,2:3]
+    i = img[:,:,3:4]
+
+    rgb = make_lupton_rgb(i,r,g)
+
+    plt.axis('off')
+    plt.imshow(rgb)
 
 def plot_collection(imgs):
     n = len(imgs)
@@ -82,7 +91,7 @@ def plot_collection(imgs):
     for i in range(rows):
         for j in range(cols):
             ax1 = fig.add_subplot(grid[i,j])
-            plot_gals(imgs[i*cols+j])
+            plot_colour(imgs[i*cols+j])
 
  
 def compare_images(imgs1, imgs2):
@@ -98,13 +107,31 @@ def compare_images(imgs1, imgs2):
     for i in range(rows):
         for j in range(cols):
             ax1 = fig.add_subplot(grid1[i,j])
-            plot_gals(imgs1[i*cols+j])
+            plot_colour(imgs1[i*cols+j])
 
             ax2 = fig.add_subplot(grid2[i,j])
-            plot_gals(imgs2[i*cols+j])
+            plot_colour(imgs2[i*cols+j])
     
 
-def show_all_channels(img, resize=True, size=32, scale=True):
+def show_aug(img, Augmenter, resize=True, size=32):
+
+    aug = Augmenter.transform(img)
+
+    fig = plt.figure(figsize=(6,3))
+    grid = gs.GridSpec(1,2)
+    
+    if resize==True:
+        img = cutimg(img,size)
+        aug = cutimg(aug,size)
+
+    ax1 = fig.add_subplot(grid[0])
+    plot_colour(img)
+
+    ax2 = fig.add_subplot(grid[1])
+    plot_colour(aug)
+           
+
+def show_indiv_channels(img, resize=True, size=32, scale=True):
 
     channels = np.shape(img)[-1]
 
@@ -128,38 +155,7 @@ def show_all_channels(img, resize=True, size=32, scale=True):
         ax.axis('off')
     plt.show()
  
-
-def show_aug(img, Augmenter, channel=0, resize=True,size=32,scale=True):
-       
-    aug = Augmenter.transform(img)
-
-    fig = plt.figure(figsize=(6,3))
-    grid = gs.GridSpec(1,2)
-    ax1 = fig.add_subplot(grid[0])
-    ax2 = fig.add_subplot(grid[1])
-
-    if resize==True:
-        img = cutimg(img,size)
-        aug = cutimg(aug,size)
-
-    min1 = np.min(img[:,:,channel])
-    max1 = np.max(img[:,:,channel])
-    min2 = np.min(aug[:,:,channel])
-    max2 = np.max(aug[:,:,channel])
-    mini = min(min1, min2)
-    maxi = max(max1, max2)
-    if scale:
-        ax1.imshow(img[:,:,channel], vmin=min1, vmax=max1)
-        ax2.imshow(aug[:,:,channel], vmin=min1, vmax=max1)
-    else:
-        ax1.imshow(img[:,:,channel])
-        ax2.imshow(aug[:,:,channel])
- 
-    ax1.axis('off')
-    ax2.axis('off')
-    plt.show()
-        
-def show_aug_all_channels(img, Augmenter, resize=True, size=32, scale=True):
+def show_aug_indiv_channels(img, Augmenter, resize=True, size=32, scale=True):
 
     aug = Augmenter.transform(img)
     channels = np.shape(img)[-1]
@@ -190,6 +186,7 @@ def show_aug_all_channels(img, Augmenter, resize=True, size=32, scale=True):
         ax1.axis('off')
         ax2.axis('off')
     plt.show()
+
 
 def plot_resid(true, pred, y_min, y_max, xlim=[0.4,3.6], ylim=[-1,1]):
 
