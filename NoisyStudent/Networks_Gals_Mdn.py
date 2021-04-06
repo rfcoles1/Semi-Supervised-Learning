@@ -11,7 +11,7 @@ class MDN(Network):
     def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_gals_mdn/'
+        self.dirpath = 'records_mdn/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
@@ -19,16 +19,17 @@ class MDN(Network):
         self.input_shape = input_shape
         self.num_out = 1
         self.num_mixtures = 3 
+        self.lr = 1e-4
 
-        lr = 1e-4
-        optimizer = keras.optimizers.Adam(lr=lr)            
+    def compile(self):
+        inp = layers.Input(self.input_shape)
+        self.Net = tf.keras.models.Model(inp, self.mdn(inp))
 
-        self.inp = layers.Input(self.input_shape)
-        self.Net = tf.keras.models.Model(self.inp, self.network_mdn(self.inp))
+        optimizer = keras.optimizers.Adam(lr=self.lr)            
         self.Net.compile(optimizer=optimizer, \
             loss = mdn_loss(self.num_mixtures))
     
-    def network_mdn(self,x):
+    def mdn(self, x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         base_model.trainable = True

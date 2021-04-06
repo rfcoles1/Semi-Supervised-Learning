@@ -4,18 +4,20 @@ sys.path.insert(1, '../Utils')
 from metrics import *
 from datasets import *
 from augment import *
-        
-class Regressor_AE(Network):
+from mdn_utils import *
+
+class MDN_AE(Network):
     def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_regress_ae/'
+        self.dirpath = 'records_mdn_ae/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
+        self.num_mixtures = 1
         self.lr = 1e-4
 
     def compile(self):
@@ -23,11 +25,10 @@ class Regressor_AE(Network):
         self.Enc = tf.keras.models.Model(Enc_inp, \
             self.encoder(Enc_inp), name='encoder')
        
-        #need to not hardcode the latent size
         Dec_inp = layers.Input(shape=(1,1,2048), name='decoder_input')
         self.Dec = tf.keras.models.Model(Dec_inp, \
             self.decoder(Dec_inp), name='decoder')
-
+        
         Reg_inp = layers.Input(shape=(1,1,2048), name='regressor_input')
         self.Reg = tf.keras.models.Model(Reg_inp, \
             self.regressor(Reg_inp), name='regressor')
@@ -38,15 +39,13 @@ class Regressor_AE(Network):
         
         optimizer = keras.optimizers.Adam(lr=self.lr)
         self.Net.compile(optimizer=optimizer, \
-                loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
-                loss_weights=[1,1],\
-                metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
+            loss={'regressor': mdn_loss(self.num_mixtures), 'decoder': tf.keras.losses.MSE})
 
 
     def encoder(self, y):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
-        self.base_model.trainabe = True
+        self.base_model.trainable = True
         z = self.base_model(y, training=True)
         return z
 
@@ -57,18 +56,22 @@ class Regressor_AE(Network):
         x = layers.Conv2DTranspose(5, 17)(x)
         return x
 
-    def regressor(self, z):
-        x = layers.Flatten()(z)
+    def regressor(self,z):
+        y = layers.Flatten()(z)
+        
+        y = layers.Dense(512, activation = 'relu')(y)
+        y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dense(128, activation = 'relu')(y)
 
-        y = layers.Dense(512, activation = 'relu')(x)
-        y = layers.Dense(256, activation = 'relu')(x)
-        y = layers.Dense(128, activation = 'relu')(x)
-        y = layers.Dense(1)(x)
-        return y
+        mus = layers.Dense(self.num_mixtures, name='mus')(y)
+        sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(y)
+        pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(y)
+        
+        mdn_out = layers.Concatenate(name='outputs')([mus, sigmas, pis])
+        return mdn_out
     
-    
-    def train(self, x_train, x_train_aug, y_train, \
-            x_test, x_test_aug, y_test, epochs, verbose=2):
+   
+    def train(self, x_train, x_train_aug, y_train, x_test, x_test_aug, y_test, epochs, verbose=2):
         batch_hist = LossHistory()
 
         History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
@@ -83,21 +86,8 @@ class Regressor_AE(Network):
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
-        
-        self.hist['train_MSE'].append(History.history['regressor_loss'])
-        self.hist['train_abs_bias'].append(History.history['regressor_abs_bias_loss'])
-        self.hist['train_MAD_bias'].append(History.history['regressor_MAD_loss'])
-        self.hist['train_bias_MAD_loss'].append(History.history['regressor_bias_MAD_loss'])
-        self.hist['train_recon_loss'].append(History.history['decoder_loss'])
-        
-        self.hist['test_MSE'].append(History.history['val_regressor_loss'])
-        self.hist['test_abs_bias'].append(History.history['val_regressor_abs_bias_loss'])
-        self.hist['test_MAD_bias'].append(History.history['val_regressor_MAD_loss'])
-        self.hist['test_bias_MAD_loss'].append(History.history['val_regressor_bias_MAD_loss'])
-        self.hist['test_recon_loss'].append(History.history['val_decoder_loss'])
 
-        self.curr_epoch += epochs
-
+    
     def predict(self, x_test):
         preds = self.Net.predict(x_test, batch_size=self.batch_size, verbose=0)
         return preds

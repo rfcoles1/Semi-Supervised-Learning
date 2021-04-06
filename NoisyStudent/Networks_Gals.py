@@ -5,51 +5,49 @@ from metrics import *
 from datasets import *
 from augment import *
         
-class Network_z(Network):
-    def __init__(self, input_shape, noise=False):
+class Regressor(Network):
+    def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_gals/'
+        self.dirpath = 'records_regress/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        
-        lr = 1e-4
-        optimizer = keras.optimizers.Adam(lr=lr)            
+        self.lr = 1e-4
 
-        self.inp = layers.Input(self.input_shape)
+    def compile(self, noise=False):
+        inp = layers.Input(self.input_shape)
         if noise==True:
-            self.Net = tf.keras.models.Model(self.inp, self.tf_resnet_noise(self.inp))
+            self.Net = tf.keras.models.Model(inp, self.regressor_noise(inp))
         else:
-            self.Net = tf.keras.models.Model(self.inp, self.tf_resnet(self.inp))
+            self.Net = tf.keras.models.Model(inp, self.regressor(inp))
 
+        optimizer = keras.optimizers.Adam(lr=self.lr)          
         self.Net.compile(loss=tf.keras.losses.MSE,\
             optimizer=optimizer,\
             metrics = [abs_bias_loss, MAD_loss, bias_MAD_loss])
         self.es = tf.keras.callbacks.EarlyStopping(monitor='loss',\
             patience=10, verbose=2, restore_best_weights=True)
-   
-    def tf_resnet(self,x):
+  
+
+    def regressor(self, x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         base_model.trainable = True
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
 
-        #x = layers.Dense(512, activation = 'relu')(x)
-        #x = layers.Dense(256, activation = 'relu')(x)
-        #x = layers.Dense(128, activation = 'relu')(x)
-        x = layers.Dense(512,activation=layers.LeakyReLU(alpha=0.1))(x)
-        x = layers.Dense(256,activation=layers.LeakyReLU(alpha=0.1))(x)
-        x = layers.Dense(128,activation=layers.LeakyReLU(alpha=0.1))(x)
+        x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dense(128, activation = 'relu')(x)
+        
         x = layers.Dense(1)(x)
-
         return x
     
-    def tf_resnet_noise(self,x):
+    def regressor_noise(self,x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         base_model.trainabe = True
@@ -62,8 +60,8 @@ class Network_z(Network):
         x = layers.Dropout(0.5)(x)
         x = layers.Dense(128, activation = 'relu')(x)
         x = layers.Dropout(0.5)(x)
-        x = layers.Dense(1)(x)
         
+        x = layers.Dense(1)(x)
         return x
 
     def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
@@ -92,4 +90,3 @@ class Network_z(Network):
         self.hist['test_bias_MAD_loss'].append(History.history['val_bias_MAD_loss'])
         
         self.curr_epoch += epochs
-
