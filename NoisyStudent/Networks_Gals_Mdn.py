@@ -18,8 +18,9 @@ class MDN(Network):
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-        self.num_mixtures = 3 
+        self.num_mixtures = 2 
         self.lr = 1e-4
+        self.single_mean = False
 
     def compile(self):
         inp = layers.Input(self.input_shape)
@@ -40,7 +41,14 @@ class MDN(Network):
         x = layers.Dense(256, activation = 'relu')(x)
         x = layers.Dense(128, activation = 'relu', name='latent')(x)
         
-        mus = layers.Dense(self.num_mixtures, name='mus')(x)
+        #if only one mean is desired, output one value then expand it using an identity layer
+        if self.single_mean:
+            mus = layers.Dense(1, name='mu')(x)
+            mus = layers.Dense(self.num_mixtures, name='mus', trainable = False,\
+                kernel_initializer = 'ones', bias_initializer = 'zeros')(mus)
+        else:
+            mus = layers.Dense(self.num_mixtures, name='mus')(x)
+
         #std must be greater than 0, #try exp, softplus, or elu + 1
         sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(x)
         #mixture coefficients must sum to 1, therefore use softmax

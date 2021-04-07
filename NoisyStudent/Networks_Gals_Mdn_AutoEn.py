@@ -19,6 +19,7 @@ class MDN_AE(Network):
         self.num_out = 1
         self.num_mixtures = 1
         self.lr = 1e-4
+        self.single_mean = False
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -62,8 +63,13 @@ class MDN_AE(Network):
         y = layers.Dense(512, activation = 'relu')(y)
         y = layers.Dense(256, activation = 'relu')(y)
         y = layers.Dense(128, activation = 'relu')(y)
-
-        mus = layers.Dense(self.num_mixtures, name='mus')(y)
+    
+        if self.single_mean:
+            mus = layers.Dense(1, name='mu')(y)
+            mus = layers.Dense(self.num_mixtures, name='mus', trainable = False,\
+                kernel_initializer = 'ones', bias_initializer = 'zeros')(mus)
+        else:
+            mus = layers.Dense(self.num_mixtures, name='mus')(y)
         sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(y)
         pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(y)
         
