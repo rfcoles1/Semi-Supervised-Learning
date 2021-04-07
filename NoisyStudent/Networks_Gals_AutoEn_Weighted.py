@@ -13,17 +13,16 @@ class AutoEnc(Network):
     def __init__(self, input_shape):
         super().__init__()
   
-        self.dirpath = 'records_gals_ae_weighted/'
+        self.dirpath = 'records_regress_ae_weighted/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
         self.batch_size = 64
         self.input_shape = input_shape
         self.num_out = 1
-
-        lr = 1e-4
-        optimizer = keras.optimizers.Adam(lr=lr)            
-
+        self.lr = 1e-4
+        
+    def compile(self):
         Enc_inp = layers.Input(input_shape, name='encoder_input')
         Weight_inp = layers.Input(input_shape, name='weight_input')
         self.Enc = tf.keras.models.Model(Enc_inp, \
@@ -42,40 +41,25 @@ class AutoEnc(Network):
         self.Net = tf.keras.models.Model(inputs=[Enc_inp, Weight_inp],\
             outputs=outputs)
         
+        optimizer = keras.optimizers.Adam(lr=self.lr)
         self.Net.compile(optimizer=optimizer, \
                 loss={'regressor': tf.keras.losses.MSE, 'decoder': weighted_recon_loss(Weight_inp)},\
+                loss_weights=[1,1],\
                 metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
 
 
-    def encoder(self,y):
+    def encoder(self, y):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
         self.base_model.trainabe = True
         z = self.base_model(y, training=True)
-        
         return z
 
-    def decoder(self,z):
-        x = layers.Conv2DTranspose(512,4)(z)
-        x = layers.Conv2DTranspose(128,5)(x)
-        x = layers.Conv2DTranspose(64,9)(x)
-        x = layers.Conv2DTranspose(5,17)(x)
-        return x
-
-    def decoder_skip(self,z):
-        skip = z
-        x = layers.Conv2DTranspose(512,4)(z)
-        x = layers.Add()([layers.Reshape([4,4,512])(skip), x])
-
-        x = layers.Conv2DTranspose(128,5)(x)
-        x = layers.Add()([layers.Reshape([8,8,128])(skip), x])
-
-        x = layers.Conv2DTranspose(32,9)(x)
-        x = layers.Add()([layers.Reshape([16,16,32])(skip), x])
-
-        x = layers.Conv2DTranspose(5,17)(x)
-        skip_conv = layers.Conv2DTranspose(5,31)(skip)
-        x = layers.Add()([skip_conv, x])
+    def decoder(self, z):
+        x = layers.Conv2DTranspose(512, 4)(z)
+        x = layers.Conv2DTranspose(128, 5)(x)
+        x = layers.Conv2DTranspose(64, 9)(x)
+        x = layers.Conv2DTranspose(5, 17)(x)
         return x
 
     def regressor(self,z):
