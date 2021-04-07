@@ -13,6 +13,13 @@ from scipy.ndimage.filters import gaussian_filter
 seed = 0
 np.random.seed(seed)
 
+
+def class_encoder(data, n_bins, y_min=0, y_max=1):
+    #assume data is normalize to be between 0 and 1
+    bins = np.linspace(y_min,y_max,n_bins)
+    digitized = np.digitize(data,bins)
+    return digitized, bins
+
 def load_z_dataset():
     try:
         img, z, _, _, _ = pickle.load(open("../Data/data_coord.pickle","rb"))
