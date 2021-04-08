@@ -17,6 +17,10 @@ class Classifier(Network):
         self.input_shape = input_shape
         self.num_out = output_shape
         self.lr = 1e-4
+        self.dropout = 0
+
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
 
     def compile(self, noise=False):
         inp = layers.Input(self.input_shape)
@@ -34,7 +38,9 @@ class Classifier(Network):
         x = layers.GlobalAveragePooling2D()(x)
 
         x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(128, activation = 'relu')(x)
         
         x = layers.Dense(self.num_out, activation='softmax')(x)
@@ -42,14 +48,13 @@ class Classifier(Network):
     
 
     def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
-        batch_hist = LossHistory()
         
         History = self.Net.fit(x_train, y_train, 
                  batch_size=self.batch_size, 
                  epochs=epochs, 
                  verbose=verbose,
                  validation_data=(x_test, y_test),
-                 callbacks=[batch_hist])
+                 callbacks=self.callbacks)
         
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
@@ -57,7 +62,6 @@ class Classifier(Network):
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
         self.hist['train_loss'].append(History.history['loss'])
-        self.hist['batch_loss'].append(batch_hist.history['loss'])
         self.hist['test_loss'].append(History.history['val_loss'])
         
         self.curr_epoch += epochs

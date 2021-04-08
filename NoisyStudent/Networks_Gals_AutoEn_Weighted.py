@@ -9,7 +9,7 @@ from ae_utils import *
 from tensorflow.python.framework.ops import disable_eager_execution
 disable_eager_execution()
 
-class AutoEnc(Network):
+class Regressor_AE(Network):
     def __init__(self, input_shape):
         super().__init__()
   
@@ -21,10 +21,14 @@ class AutoEnc(Network):
         self.input_shape = input_shape
         self.num_out = 1
         self.lr = 1e-4
-        
+        self.dropout = 0
+
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
+
     def compile(self):
-        Enc_inp = layers.Input(input_shape, name='encoder_input')
-        Weight_inp = layers.Input(input_shape, name='weight_input')
+        Enc_inp = layers.Input(self.input_shape, name='encoder_input')
+        Weight_inp = layers.Input(self.input_shape, name='weight_input')
         self.Enc = tf.keras.models.Model(Enc_inp, \
             self.encoder(Enc_inp), name='encoder')
        
@@ -46,7 +50,7 @@ class AutoEnc(Network):
                 loss={'regressor': tf.keras.losses.MSE, 'decoder': weighted_recon_loss(Weight_inp)},\
                 loss_weights=[1,1],\
                 metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
-
+        
 
     def encoder(self, y):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
@@ -63,25 +67,27 @@ class AutoEnc(Network):
         return x
 
     def regressor(self,z):
-        x = layers.Flatten()(z)
+        y = layers.Flatten()(z)
 
-        y = layers.Dense(512, activation = 'relu')(x)
-        y = layers.Dense(256, activation = 'relu')(x)
-        y = layers.Dense(128, activation = 'relu')(x)
-        y = layers.Dense(1)(x)
+        y = layers.Dense(512, activation = 'relu')(y)
+        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dense(128, activation = 'relu')(y)
+
+        y = layers.Dense(1)(y)
         return y
     
     
-    def train(self, x_train, train_weights, x_train_aug, y_train, \
-            x_test, test_weights, x_test_aug, y_test, epochs, verbose=2):
-        batch_hist = LossHistory()
+    def train(self, x_train, train_weights, y_train, \
+            x_test, test_weights, y_test, epochs, verbose=2):
 
         History = self.Net.fit([x_train, train_weights], {'regressor': y_train, 'decoder': x_train},
             batch_size=self.batch_size,
             epochs=epochs,
             verbose=verbose,
             validation_data=([x_test, test_weights], {'regressor': y_test, 'decoder': x_test}),
-            callbacks=[batch_hist])
+            callbacks=self.callbacks)
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
