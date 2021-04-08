@@ -17,6 +17,7 @@ class Regressor_AE(Network):
         self.input_shape = input_shape
         self.num_out = 1
         self.lr = 1e-4
+        self.dropout = 0
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -42,6 +43,8 @@ class Regressor_AE(Network):
                 loss_weights=[1,1],\
                 metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
 
+        self.es = tf.keras.callbacks.EarlyStopping(monitor='loss',\
+            patience=25, verbose=2, restore_best_weights=True)
 
     def encoder(self, y):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
@@ -58,12 +61,15 @@ class Regressor_AE(Network):
         return x
 
     def regressor(self, z):
-        x = layers.Flatten()(z)
+        y = layers.Flatten()(z)
 
-        y = layers.Dense(512, activation = 'relu')(x)
-        y = layers.Dense(256, activation = 'relu')(x)
-        y = layers.Dense(128, activation = 'relu')(x)
-        y = layers.Dense(1)(x)
+        y = layers.Dense(512, activation = 'relu')(y)
+        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dense(128, activation = 'relu')(y)
+        
+        y = layers.Dense(1)(y)
         return y
     
     
@@ -76,7 +82,7 @@ class Regressor_AE(Network):
             epochs=epochs,
             verbose=verbose,
             validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
-            callbacks=[batch_hist])
+            callbacks=[batch_hist, self.es])
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)

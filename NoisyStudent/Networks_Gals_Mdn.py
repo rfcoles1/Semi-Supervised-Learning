@@ -20,6 +20,7 @@ class MDN(Network):
         self.num_out = 1
         self.num_mixtures = 2 
         self.lr = 1e-4
+        self.dropout = 0
         self.single_mean = False
 
     def compile(self):
@@ -38,7 +39,9 @@ class MDN(Network):
         x = layers.GlobalAveragePooling2D()(x)
 
         x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(128, activation = 'relu', name='latent')(x)
         
         #if only one mean is desired, output one value then expand it using an identity layer

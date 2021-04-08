@@ -17,20 +17,19 @@ class Regressor(Network):
         self.input_shape = input_shape
         self.num_out = 1
         self.lr = 1e-4
+        self.dropout = 0
 
     def compile(self, noise=False):
         inp = layers.Input(self.input_shape)
-        if noise==True:
-            self.Net = tf.keras.models.Model(inp, self.regressor_noise(inp))
-        else:
-            self.Net = tf.keras.models.Model(inp, self.regressor(inp))
+        self.Net = tf.keras.models.Model(inp, self.regressor(inp))
 
         optimizer = keras.optimizers.Adam(lr=self.lr)          
         self.Net.compile(loss=tf.keras.losses.MSE,\
             optimizer=optimizer,\
             metrics = [abs_bias_loss, MAD_loss, bias_MAD_loss])
+        
         self.es = tf.keras.callbacks.EarlyStopping(monitor='loss',\
-            patience=10, verbose=2, restore_best_weights=True)
+            patience=25, verbose=2, restore_best_weights=True)
   
 
     def regressor(self, x):
@@ -41,29 +40,14 @@ class Regressor(Network):
         x = layers.GlobalAveragePooling2D()(x)
 
         x = layers.Dense(512, activation = 'relu')(x)
+        x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(256, activation = 'relu')(x)
+        x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(128, activation = 'relu')(x)
-        
+
         x = layers.Dense(1)(x)
         return x
     
-    def regressor_noise(self,x):
-        base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
-            input_shape=self.input_shape)
-        base_model.trainabe = True
-        x = base_model(x, training=True)
-        x = layers.GlobalAveragePooling2D()(x)
-
-        x = layers.Dense(512, activation = 'relu')(x)
-        x = layers.Dropout(0.5)(x)
-        x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dropout(0.5)(x)
-        x = layers.Dense(128, activation = 'relu')(x)
-        x = layers.Dropout(0.5)(x)
-        
-        x = layers.Dense(1)(x)
-        return x
-
     def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
         batch_hist = LossHistory()
         

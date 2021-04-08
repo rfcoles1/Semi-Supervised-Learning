@@ -19,6 +19,7 @@ class MDN_AE(Network):
         self.num_out = 1
         self.num_mixtures = 1
         self.lr = 1e-4
+        self.dropout = 0
         self.single_mean = False
 
     def compile(self):
@@ -61,6 +62,7 @@ class MDN_AE(Network):
         y = layers.Flatten()(z)
         
         y = layers.Dense(512, activation = 'relu')(y)
+        y = layers.Dropout(self.dropout)(y)
         y = layers.Dense(256, activation = 'relu')(y)
         y = layers.Dense(128, activation = 'relu')(y)
     
