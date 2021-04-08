@@ -19,7 +19,10 @@ class Regressor(Network):
         self.lr = 1e-4
         self.dropout = 0
 
-    def compile(self, noise=False):
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
+
+    def compile(self):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.regressor(inp))
 
@@ -28,9 +31,6 @@ class Regressor(Network):
             optimizer=optimizer,\
             metrics = [abs_bias_loss, MAD_loss, bias_MAD_loss])
         
-        self.es = tf.keras.callbacks.EarlyStopping(monitor='loss',\
-            patience=25, verbose=2, restore_best_weights=True)
-  
 
     def regressor(self, x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
@@ -49,25 +49,27 @@ class Regressor(Network):
         return x
     
     def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
-        batch_hist = LossHistory()
+        #batch_hist = LossHistory()
         
         History = self.Net.fit(x_train, y_train, 
-                 batch_size=self.batch_size, 
-                 epochs=epochs, 
-                 verbose=verbose,
-                 validation_data=(x_test, y_test),
-                 callbacks=[batch_hist])
+                batch_size=self.batch_size, 
+                epochs=epochs, 
+                verbose=verbose,
+                validation_data=(x_test, y_test),
+                callbacks=self.callbacks)
         
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
       
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
+        
         self.hist['train_MSE'].append(History.history['loss'])
-        self.hist['batch_MSE'].append(batch_hist.history['loss'])
+        #self.hist['batch_MSE'].append(batch_hist.history['loss'])
         self.hist['train_abs_bias'].append(History.history['abs_bias_loss'])
         self.hist['train_MAD_loss'].append(History.history['MAD_loss'])
         self.hist['train_bias_MAD_loss'].append(History.history['bias_MAD_loss'])
+        
         self.hist['test_MSE'].append(History.history['val_loss'])
         self.hist['test_abs_bias'].append(History.history['val_abs_bias_loss'])
         self.hist['test_MAD_loss'].append(History.history['val_MAD_loss'])

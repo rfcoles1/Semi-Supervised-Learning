@@ -23,6 +23,9 @@ class MDN(Network):
         self.dropout = 0
         self.single_mean = False
 
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
+
     def compile(self):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.mdn(inp))
@@ -30,7 +33,8 @@ class MDN(Network):
         optimizer = keras.optimizers.Adam(lr=self.lr)            
         self.Net.compile(optimizer=optimizer, \
             loss = mdn_loss(self.num_mixtures))
-    
+   
+   
     def mdn(self, x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
@@ -61,21 +65,19 @@ class MDN(Network):
         return mdn_out
 
     def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
-        batch_hist = LossHistory()
 
         History = self.Net.fit(x_train, y_train,
                 batch_size=self.batch_size,
                 epochs=epochs,
                 verbose=verbose,
                 validation_data=(x_test,y_test),
-                callbacks=[batch_hist])
+                callbacks=self.callbacks)
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
-
         self.hist['train_loss'].append(History.history['loss'])
         self.hist['test_loss'].append(History.history['val_loss'])
 

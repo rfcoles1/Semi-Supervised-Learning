@@ -19,6 +19,9 @@ class Regressor_AE(Network):
         self.lr = 1e-4
         self.dropout = 0
 
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
+
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
         self.Enc = tf.keras.models.Model(Enc_inp, \
@@ -75,14 +78,13 @@ class Regressor_AE(Network):
     
     def train(self, x_train, x_train_aug, y_train, \
             x_test, x_test_aug, y_test, epochs, verbose=2):
-        batch_hist = LossHistory()
 
         History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
             batch_size=self.batch_size,
             epochs=epochs,
             verbose=verbose,
             validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
-            callbacks=[batch_hist, self.es])
+            callbacks=self.callbacks)
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)

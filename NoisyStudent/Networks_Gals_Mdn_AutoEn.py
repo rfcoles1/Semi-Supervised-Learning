@@ -22,6 +22,9 @@ class MDN_AE(Network):
         self.dropout = 0
         self.single_mean = False
 
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
+
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
         self.Enc = tf.keras.models.Model(Enc_inp, \
@@ -64,6 +67,7 @@ class MDN_AE(Network):
         y = layers.Dense(512, activation = 'relu')(y)
         y = layers.Dropout(self.dropout)(y)
         y = layers.Dense(256, activation = 'relu')(y)
+        y = layers.Dropout(self.dropout)(y)
         y = layers.Dense(128, activation = 'relu')(y)
     
         if self.single_mean:
@@ -80,14 +84,13 @@ class MDN_AE(Network):
     
    
     def train(self, x_train, x_train_aug, y_train, x_test, x_test_aug, y_test, epochs, verbose=2):
-        batch_hist = LossHistory()
 
         History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
-            batch_size=self.batch_size,
-            epochs=epochs,
-            verbose=verbose,
-            validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
-            callbacks=[batch_hist])
+                batch_size=self.batch_size,
+                epochs=epochs,
+                verbose=verbose,
+                validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
+                callbacks=self.callbacks)
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
         iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
@@ -95,7 +98,14 @@ class MDN_AE(Network):
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
 
-    
+        self.hist['train_regress_loss'].append(History.history['regressor_loss'])
+        self.hist['train_recon_loss'].append(History.history['decoder_loss'])
+
+        self.hist['test_regress_loss'].append(History.history['val_regressor_loss'])
+        self.hist['test_recon_loss'].append(History.history['val_decoder_loss'])
+        
+        self.curr_epoch += epochs
+
     def predict(self, x_test):
         preds = self.Net.predict(x_test, batch_size=self.batch_size, verbose=0)
         return preds
