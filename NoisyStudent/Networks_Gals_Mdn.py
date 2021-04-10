@@ -17,18 +17,18 @@ class MDN(Network):
         
         self.batch_size = 64
         self.input_shape = input_shape
-        self.num_out = 1
         self.num_mixtures = 2 
         self.lr = 1e-4
         self.dropout = 0
+        self.patience = 25
         self.single_mean = False
-
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
-                                patience=10, verbose=2, restore_best_weights=True)]
 
     def compile(self):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.mdn(inp))
+
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=self.patience, verbose=2, restore_best_weights=True)]
 
         optimizer = keras.optimizers.Adam(lr=self.lr)            
         self.Net.compile(optimizer=optimizer, \

@@ -18,17 +18,19 @@ class Classifier(Network):
         self.num_out = output_shape
         self.lr = 1e-4
         self.dropout = 0
-
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
-                                patience=10, verbose=2, restore_best_weights=True)]
+        self.patience = 25
 
     def compile(self, noise=False):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.classifier(inp))
 
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=10, verbose=2, restore_best_weights=True)]
+
         optimizer = keras.optimizers.Adam(lr=self.lr)          
         self.Net.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),\
             optimizer=optimizer)
+
 
     def classifier(self, x):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\

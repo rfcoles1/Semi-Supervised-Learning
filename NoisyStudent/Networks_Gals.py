@@ -15,16 +15,16 @@ class Regressor(Network):
         
         self.batch_size = 64
         self.input_shape = input_shape
-        self.num_out = 1
         self.lr = 1e-4
         self.dropout = 0
-
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
-                                patience=10, verbose=2, restore_best_weights=True)]
+        self.patience = 25
 
     def compile(self):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.regressor(inp))
+
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+                                patience=self.patience, verbose=2, restore_best_weights=True)]
 
         optimizer = keras.optimizers.Adam(lr=self.lr)          
         self.Net.compile(loss=tf.keras.losses.MSE,\
