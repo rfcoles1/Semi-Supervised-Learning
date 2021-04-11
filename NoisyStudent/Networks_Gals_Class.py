@@ -24,7 +24,7 @@ class Classifier(Network):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.classifier(inp))
 
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
                                 patience=10, verbose=2, restore_best_weights=True)]
 
         optimizer = keras.optimizers.Adam(lr=self.lr)          

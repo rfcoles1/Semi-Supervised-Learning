@@ -39,7 +39,7 @@ class MDN_AE(Network):
         self.Net = tf.keras.models.Model(inputs=Enc_inp,\
             outputs=outputs)
        
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='loss',\
+        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
                                 patience=self.patience, verbose=2, restore_best_weights=True)]
 
         optimizer = keras.optimizers.Adam(lr=self.lr)
