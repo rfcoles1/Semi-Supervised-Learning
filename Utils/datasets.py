@@ -29,7 +29,7 @@ def load_test():
     except:
         print("Could not load galaxy data")
 
-def load_full(balanced=False):
+def load_full(balanced=True):
     try:
         img, z, _, _, _ = pickle.load(open("../Data/data_full.pickle","rb"))
         out_size = 1
@@ -71,6 +71,14 @@ def load_full(balanced=False):
     except:
         print("Could not load galaxy data")
 
+def load_dist():
+    try:
+        img, z, z_sig, dist, dist_sig = pickle.load(open("../Data/data_dist.pickle","rb"))
+        out_size = 1
+        return img, dist, np.shape(img[0]), out_size 
+    except:
+        print("Could not load galaxy data")
+
 
 
 class Scaler():
@@ -107,7 +115,8 @@ class Loader():
         
         self.datasets = {
             "load_test": load_test(),
-            "load_full": load_full(balanced)}
+            "load_full": load_full(balanced),
+            "load_dist": load_dist()}
 
         x, y, self.shape, self.num_out = self.datasets[dat]
 
