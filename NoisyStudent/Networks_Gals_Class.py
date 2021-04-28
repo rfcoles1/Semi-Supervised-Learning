@@ -25,11 +25,12 @@ class Classifier(Network):
         self.Net = tf.keras.models.Model(inp, self.classifier(inp))
 
         self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
-                                patience=10, verbose=2, restore_best_weights=True)]
+                                patience=self.patience, verbose=2, restore_best_weights=True)]
 
         optimizer = keras.optimizers.Adam(lr=self.lr)          
         self.Net.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),\
-            optimizer=optimizer)
+            optimizer=optimizer,\
+            metrics = ['categorical_accuracy'])
 
 
     def classifier(self, x):
@@ -43,7 +44,7 @@ class Classifier(Network):
         x = layers.Dropout(self.dropout)(x)
         x = layers.Dense(256, activation = 'relu')(x)
         x = layers.Dropout(self.dropout)(x)
-        x = layers.Dense(128, activation = 'relu')(x)
+        x = layers.Dense(128)(x)
         
         x = layers.Dense(self.num_out, activation='softmax')(x)
         return x
