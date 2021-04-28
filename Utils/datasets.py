@@ -20,6 +20,15 @@ def class_encoder(data, n_bins, y_min=0, y_max=1):
     digitized = np.digitize(data,bins)
     return digitized, bins
 
+def get_new_labels(x_test, pred, threshold=0):
+    maxind = np.argmax(pred, axis=1)
+    if threshold == 0:
+        return x_test, maxind
+    else:
+        maxval = np.max(pred, axis=1)
+        idx = np.where(maxval>threshold)
+        return x_test[idx], maxind[idx]
+
 def load_test():
     try:
         img, z, _, _, _ = pickle.load(open("../Data/data_2500.pickle","rb"))
