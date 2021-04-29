@@ -30,7 +30,7 @@ class Classifier(Network):
         optimizer = keras.optimizers.Adam(lr=self.lr)          
         self.Net.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(),\
             optimizer=optimizer,\
-            metrics = ['accuracy', 'categorical_accuracy'])
+            metrics = ['accuracy'])
 
 
     def classifier(self, x):
