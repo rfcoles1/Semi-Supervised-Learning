@@ -13,14 +13,18 @@ class MDN_AE(Network):
         self.dirpath = 'records_mdn_ae/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
-        
-        self.batch_size = 64
+
         self.input_shape = input_shape
-        self.num_mixtures = 2
-        self.lr = 1e-4
-        self.dropout = 0
-        self.patience = 25
-        self.single_mean = False
+
+        run = wandb.init(project='NoisyStudent', entity='rfcoles')
+
+        self.config = wandb.config
+        self.config.model = 'AutoEnc_MDN'
+        self.config.learning_rate = 1e-4
+        self.config.batch_size = 64
+        self.config.dropout = 0
+        self.config.num_mixtures = 2
+        self.config.single_mean = False
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -39,12 +43,14 @@ class MDN_AE(Network):
         self.Net = tf.keras.models.Model(inputs=Enc_inp,\
             outputs=outputs)
        
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
-                                patience=self.patience, verbose=2, restore_best_weights=True)]
+        self.callbacks = [WandbCallback()]
+            #[tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
+                #patience=self.patience, verbose=2, restore_best_weights=True)]
 
-        optimizer = keras.optimizers.Adam(lr=self.lr)
+        optimizer = keras.optimizers.Adam(lr=self.config.learning_rate)
         self.Net.compile(optimizer=optimizer, \
-            loss={'regressor': mdn_loss(self.num_mixtures), 'decoder': tf.keras.losses.MSE})
+            loss={'regressor': mdn_loss(self.config.num_mixtures), 'decoder': tf.keras.losses.MSE},\
+            loss_weights=[1,1])
 
 
     def encoder(self, y):
@@ -65,19 +71,19 @@ class MDN_AE(Network):
         y = layers.Flatten()(z)
         
         y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dropout(self.config.dropout)(y)
         y = layers.Dense(256, activation = 'relu')(y)
-        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dropout(self.config.dropout)(y)
         y = layers.Dense(128, activation = 'relu')(y)
     
-        if self.single_mean:
+        if self.config.single_mean:
             mus = layers.Dense(1, name='mu')(y)
-            mus = layers.Dense(self.num_mixtures, name='mus', trainable = False,\
+            mus = layers.Dense(self.config.num_mixtures, name='mus', trainable = False,\
                 kernel_initializer = 'ones', bias_initializer = 'zeros')(mus)
         else:
-            mus = layers.Dense(self.num_mixtures, name='mus')(y)
-        sigmas = layers.Dense(self.num_mixtures, activation=elu_plus, name='sigmas')(y)
-        pis = layers.Dense(self.num_mixtures, activation='softmax', name='pis')(y)
+            mus = layers.Dense(self.config.num_mixtures, name='mus')(y)
+        sigmas = layers.Dense(self.config.num_mixtures, activation=elu_plus, name='sigmas')(y)
+        pis = layers.Dense(self.config.num_mixtures, activation='softmax', name='pis')(y)
         
         mdn_out = layers.Concatenate(name='outputs')([mus, sigmas, pis])
         return mdn_out
@@ -86,14 +92,14 @@ class MDN_AE(Network):
     def train(self, x_train, x_train_aug, y_train, x_test, x_test_aug, y_test, epochs, verbose=2):
 
         History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
-                batch_size=self.batch_size,
+                batch_size=self.config.batch_size,
                 epochs=epochs,
                 verbose=verbose,
                 validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
                 callbacks=self.callbacks)
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
-        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
+        iterations = np.ceil(np.shape(x_train)[0]/self.config.batch_size)
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)

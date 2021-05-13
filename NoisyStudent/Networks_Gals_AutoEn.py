@@ -12,12 +12,16 @@ class Regressor_AE(Network):
         self.dirpath = 'records_regress_ae/'
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
-        
-        self.batch_size = 64
+       
         self.input_shape = input_shape
-        self.lr = 1e-4
-        self.dropout = 0
-        self.patience = 25
+
+        run = wandb.init(project='NoisyStudent', entity='rfcoles')
+
+        self.config = wandb.config
+        self.config.model = 'AutoEnc_Regressor'
+        self.config.learning_rate = 1e-4
+        self.config.batch_size = 64
+        self.config.dropout = 0
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -37,18 +41,17 @@ class Regressor_AE(Network):
         self.Net = tf.keras.models.Model(inputs=Enc_inp,\
             outputs=outputs)
 
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
-                                patience=self.patience, verbose=2, restore_best_weights=True)]
+        self.callbacks = [WandbCallback()]
+            #[tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
+                #patience=self.patience, verbose=2, restore_best_weights=True)]
 
-        optimizer = keras.optimizers.Adam(lr=self.lr)
+        optimizer = keras.optimizers.Adam(lr=self.config.learning_rate)
         self.Net.compile(optimizer=optimizer, \
-                loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
-                loss_weights=[1,1],\
-                metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
+            loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
+            loss_weights=[1,1],\
+            metrics={'regressor': [abs_bias_loss, MAD_loss, bias_MAD_loss]})
 
-        self.es = tf.keras.callbacks.EarlyStopping(monitor='loss',\
-            patience=25, verbose=2, restore_best_weights=True)
-
+    
     def encoder(self, y):
         self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
             input_shape=self.input_shape)
@@ -67,9 +70,9 @@ class Regressor_AE(Network):
         y = layers.Flatten()(z)
 
         y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dropout(self.config.dropout)(y)
         y = layers.Dense(256, activation = 'relu')(y)
-        y = layers.Dropout(self.dropout)(y)
+        y = layers.Dropout(self.config.dropout)(y)
         y = layers.Dense(128, activation = 'relu')(y)
         
         y = layers.Dense(1)(y)
@@ -80,14 +83,14 @@ class Regressor_AE(Network):
             x_test, x_test_aug, y_test, epochs, verbose=2):
 
         History = self.Net.fit(x_train_aug, {'regressor': y_train, 'decoder': x_train},
-            batch_size=self.batch_size,
+            batch_size=self.config.batch_size,
             epochs=epochs,
             verbose=verbose,
             validation_data=(x_test_aug, {'regressor': y_test, 'decoder': x_test}),
             callbacks=self.callbacks)
 
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
-        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
+        iterations = np.ceil(np.shape(x_train)[0]/self.config.batch_size)
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)

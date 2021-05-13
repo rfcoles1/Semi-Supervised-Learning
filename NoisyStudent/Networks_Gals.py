@@ -13,22 +13,27 @@ class Regressor(Network):
         if not os.path.exists(self.dirpath):
             os.makedirs(self.dirpath)
         
-        self.batch_size = 64
         self.input_shape = input_shape
-        self.lr = 1e-4
-        self.dropout = 0
-        self.patience = 25
+        
+        run = wandb.init(project='NoisyStudent', entity='rfcoles')
+
+        self.config = wandb.config
+        self.config.model = "Regressor"
+        self.config.learning_rate = 1e-4
+        self.config.batch_size = 64
+        self.config.dropout = 0
 
     def compile(self):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.regressor(inp))
 
-        self.callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
-                                patience=self.patience, verbose=2, restore_best_weights=True)]
+        self.callbacks = [WandbCallback()]
+            #tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
+            #    patience=self.patience, verbose=2, restore_best_weights=True)]
 
-        optimizer = keras.optimizers.Adam(lr=self.lr)          
-        self.Net.compile(loss=tf.keras.losses.MSE,\
-            optimizer=optimizer,\
+        optimizer = keras.optimizers.Adam(lr=self.config.learning_rate)          
+        self.Net.compile(optimizer = optimizer,\
+            loss=tf.keras.losses.MSE,\
             metrics = [abs_bias_loss, MAD_loss, bias_MAD_loss])
         
 
@@ -40,32 +45,29 @@ class Regressor(Network):
         x = layers.GlobalAveragePooling2D()(x)
 
         x = layers.Dense(512, activation = 'relu')(x)
-        x = layers.Dropout(self.dropout)(x)
+        x = layers.Dropout(self.config.dropout)(x)
         x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dropout(self.dropout)(x)
+        x = layers.Dropout(self.config.dropout)(x)
         x = layers.Dense(128, activation = 'relu')(x)
 
         x = layers.Dense(1)(x)
         return x
     
     def train(self, x_train, y_train, x_test, y_test, epochs, verbose=2):
-        #batch_hist = LossHistory()
-        
         History = self.Net.fit(x_train, y_train, 
-                batch_size=self.batch_size, 
+                batch_size=self.config.batch_size, 
                 epochs=epochs, 
                 verbose=verbose,
                 validation_data=(x_test, y_test),
                 callbacks=self.callbacks)
         
         epochs_arr = np.arange(self.curr_epoch, self.curr_epoch+epochs, 1)
-        iterations = np.ceil(np.shape(x_train)[0]/self.batch_size)
+        iterations = np.ceil(np.shape(x_train)[0]/self.config.batch_size)
       
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
         
         self.hist['train_MSE'].append(History.history['loss'])
-        #self.hist['batch_MSE'].append(batch_hist.history['loss'])
         self.hist['train_abs_bias'].append(History.history['abs_bias_loss'])
         self.hist['train_MAD_loss'].append(History.history['MAD_loss'])
         self.hist['train_bias_MAD_loss'].append(History.history['bias_MAD_loss'])
