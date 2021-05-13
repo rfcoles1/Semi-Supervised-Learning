@@ -5,7 +5,7 @@ from metrics import *
 from datasets import *
 from augment import *
         
-class Regressor_AE(Network):
+class Regressor_AE(AutoEncoder):
     def __init__(self, input_shape):
         super().__init__()
   
@@ -109,23 +109,3 @@ class Regressor_AE(Network):
 
         self.curr_epoch += epochs
 
-    def predict(self, x_test):
-        preds = self.Net.predict(x_test, batch_size=self.batch_size, verbose=0)
-        return preds
-
-
-    def save(self, path):
-        f = open(self.dirpath + path + '.pickle', 'wb')
-        pickle.dump(self.hist,f)
-        f.close()
-        self.Enc.save_weights(self.dirpath + path + '_enc.h5')
-        self.Dec.save_weights(self.dirpath + path + '_dec.h5')
-        self.Reg.save_weights(self.dirpath + path + '_reg.h5')
-
-    def load(self, path):
-        f = open(self.dirpath + path + '.pickle', 'rb')
-        self.hist = pickle.load(f)
-        f.close()
-        self.Enc.load_weights(self.dirpath + path + '_enc.h5')
-        self.Dec.load_weights(self.dirpath + path + '_dec.h5')
-        self.Reg.load_weights(self.dirpath + path + '_reg.h5')

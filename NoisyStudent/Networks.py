@@ -74,11 +74,15 @@ class AutoEncoder():
         f = open(self.dirpath + path + '.pickle', 'wb')
         pickle.dump(self.hist,f)
         f.close()
-        self.Net.save_weights(self.dirpath + path + '.h5')
+        self.Enc.save_weights(self.dirpath + path + '_enc.h5')
+        self.Dec.save_weights(self.dirpath + path + '_dec.h5')
+        self.Reg.save_weights(self.dirpath + path + '_reg.h5')
 
     def load(self, path):
         f = open(self.dirpath + path + '.pickle', 'rb')
         self.hist = pickle.load(f)
         f.close()
-        self.Net.load_weights(self.dirpath + path + '.h5')
+        self.Enc.load_weights(self.dirpath + path + '_enc.h5')
+        self.Dec.load_weights(self.dirpath + path + '_dec.h5')
+        self.Reg.load_weights(self.dirpath + path + '_reg.h5')
         self.curr_epoch = self.hist['epochs'][-1][-1]
