@@ -1,12 +1,11 @@
 from Networks import *
 
 sys.path.insert(1, '../Utils')
-from metrics import *
 from datasets import *
 from augment import *
 from mdn_utils import *
 
-class MDN_AE(Network):
+class MDN_AE(AutoEncoder):
     def __init__(self, input_shape):
         super().__init__()
   
@@ -19,12 +18,13 @@ class MDN_AE(Network):
         run = wandb.init(project='NoisyStudent', entity='rfcoles')
 
         self.config = wandb.config
-        self.config.model = 'AutoEnc_MDN'
+        self.config.model = "AutoEnc_MDN"
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
-        self.config.num_mixtures = 2
+        self.config.num_mixes = 2
         self.config.single_mean = False
+        self.config.num_classes = 196
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -43,19 +43,24 @@ class MDN_AE(Network):
         self.Net = tf.keras.models.Model(inputs=Enc_inp,\
             outputs=outputs)
        
-        self.callbacks = [WandbCallback()]
-            #[tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
-                #patience=self.patience, verbose=2, restore_best_weights=True)]
-
         optimizer = keras.optimizers.Adam(lr=self.config.learning_rate)
         self.Net.compile(optimizer=optimizer, \
-            loss={'regressor': mdn_loss(self.config.num_mixtures), 'decoder': tf.keras.losses.MSE},\
-            loss_weights=[1,1])
+            loss={'regressor': mdn_loss(self.config.num_mixes), 'decoder': tf.keras.losses.MSE},\
+            loss_weights=[1,1],
+            metrics = {'regressor': [
+                mdn_bias(self.config.num_mixes, self.config.num_classes),
+                mdn_stdev(self.config.num_mixes, self.config.num_classes),
+                mdn_MAD(self.config.num_mixes, self.config.num_classes),
+                mdn_outliers(self.config.num_mixes, self.config.num_classes),
+                mdn_bias_MAD(self.config.num_mixes, self.config.num_classes)
+                ]})
 
+        self.callbacks = []
+        #self.callbacks = [WandbCallback()]
 
     def encoder(self, y):
-        self.base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
-            input_shape=self.input_shape)
+        self.base_model = tf.keras.applications.ResNet50(weights=None,\
+            input_shape=self.input_shape, include_top=False)
         self.base_model.trainable = True
         z = self.base_model(y, training=True)
         return z
@@ -78,12 +83,12 @@ class MDN_AE(Network):
     
         if self.config.single_mean:
             mus = layers.Dense(1, name='mu')(y)
-            mus = layers.Dense(self.config.num_mixtures, name='mus', trainable = False,\
+            mus = layers.Dense(self.config.num_mixes, name='mus', trainable = False,\
                 kernel_initializer = 'ones', bias_initializer = 'zeros')(mus)
         else:
-            mus = layers.Dense(self.config.num_mixtures, name='mus')(y)
-        sigmas = layers.Dense(self.config.num_mixtures, activation=elu_plus, name='sigmas')(y)
-        pis = layers.Dense(self.config.num_mixtures, activation='softmax', name='pis')(y)
+            mus = layers.Dense(self.config.num_mixes, name='mus')(y)
+        sigmas = layers.Dense(self.config.num_mixes, activation=elu_plus, name='sigmas')(y)
+        pis = layers.Dense(self.config.num_mixes, activation='softmax', name='pis')(y)
         
         mdn_out = layers.Concatenate(name='outputs')([mus, sigmas, pis])
         return mdn_out
@@ -104,31 +109,22 @@ class MDN_AE(Network):
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
 
-        self.hist['train_regress_loss'].append(History.history['regressor_loss'])
-        self.hist['train_recon_loss'].append(History.history['decoder_loss'])
+        self.hist['train_loss'].append(History.history['regressor_loss'])
+        self.hist['train_bias'].append(History.history['regressor_bias'])
+        self.hist['train_stdev'].append(History.history['regressor_stdev'])
+        self.hist['train_MAD'].append(History.history['regressor_MAD'])
+        self.hist['train_outliers'].append(History.history['regressor_outliers'])
+        self.hist['train_bias_MAD'].append(History.history['regressor_bias_MAD'])
+        self.hist['train_recon'].append(History.history['decoder_loss'])
 
-        self.hist['test_regress_loss'].append(History.history['val_regressor_loss'])
-        self.hist['test_recon_loss'].append(History.history['val_decoder_loss'])
+        self.hist['test_loss'].append(History.history['val_regressor_loss'])
+        self.hist['test_bias'].append(History.history['val_regressor_bias'])
+        self.hist['test_stdev'].append(History.history['val_regressor_stdev'])
+        self.hist['test_MAD'].append(History.history['val_regressor_MAD'])
+        self.hist['test_outliers'].append(History.history['val_regressor_outliers'])
+        self.hist['test_bias_MAD'].append(History.history['val_regressor_bias_MAD'])
+        self.hist['test_recon'].append(History.history['val_decoder_loss'])
         
         self.curr_epoch += epochs
 
-    def predict(self, x_test):
-        preds = self.Net.predict(x_test, batch_size=self.batch_size, verbose=0)
-        return preds
-
-
-    def save(self, path):
-        f = open(self.dirpath + path + '.pickle', 'wb')
-        pickle.dump(self.hist,f)
-        f.close()
-        self.Enc.save_weights(self.dirpath + path + '_enc.h5')
-        self.Dec.save_weights(self.dirpath + path + '_dec.h5')
-        self.Reg.save_weights(self.dirpath + path + '_reg.h5')
-
-    def load(self, path):
-        f = open(self.dirpath + path + '.pickle', 'rb')
-        self.hist = pickle.load(f)
-        f.close()
-        self.Enc.load_weights(self.dirpath + path + '_enc.h5')
-        self.Dec.load_weights(self.dirpath + path + '_dec.h5')
-        self.Reg.load_weights(self.dirpath + path + '_reg.h5')
+        wandb.finish()

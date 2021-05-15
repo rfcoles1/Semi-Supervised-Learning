@@ -1,7 +1,6 @@
 from Networks import *
 
 sys.path.insert(1, '../Utils')
-from metrics import *
 from datasets import *
 from augment import *
 from mdn_utils import *
@@ -17,32 +16,40 @@ class MDN(Network):
 
         self.input_shape = input_shape
 
-        run = wandb.init(project='NoisyStudent', entity='rfcoles')
+        wandb.init(project='NoisyStudent', entity='rfcoles')
 
         self.config = wandb.config
-        self.config.model = 'MDN'
+        self.config.model = "MDN"
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
-        self.config.num_mixtures = 2 
+        self.config.num_mixes = 2 
         self.config.single_mean = False
+        self.config.num_classes = 196
 
     def compile(self):
         inp = layers.Input(self.input_shape)
         self.Net = tf.keras.models.Model(inp, self.mdn(inp))
-
-        self.callbacks = [WandbCallback()]
-            #[tf.keras.callbacks.EarlyStopping(monitor='val_loss',\
-            #patience=self.patience, verbose=2, restore_best_weights=True)]
-
+        
         optimizer = keras.optimizers.Adam(lr=self.config.learning_rate)
+        
         self.Net.compile(optimizer=optimizer,\
-            loss = mdn_loss(self.config.num_mixtures))
-          
-   
+            loss = mdn_loss(self.config.num_mixes),\
+            metrics = [
+                mdn_bias(self.config.num_mixes, self.config.num_classes),
+                mdn_stdev(self.config.num_mixes, self.config.num_classes),
+                mdn_MAD(self.config.num_mixes, self.config.num_classes),
+                mdn_outliers(self.config.num_mixes, self.config.num_classes),
+                mdn_bias_MAD(self.config.num_mixes, self.config.num_classes)
+                ])
+
+        self.callbacks = []
+        #self.callbacks = [WandbCallback()]
+
+  
     def mdn(self, x):
-        base_model = tf.keras.applications.ResNet50(include_top=False, weights=None,\
-            input_shape=self.input_shape)
+        base_model = tf.keras.applications.ResNet50(weights=None,\
+            include_top=False, input_shape=self.input_shape)
         base_model.trainable = True
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
@@ -56,15 +63,15 @@ class MDN(Network):
         #if only one mean is desired, output one value then expand it using an identity layer
         if self.config.single_mean:
             mus = layers.Dense(1, name='mu')(x)
-            mus = layers.Dense(self.config.num_mixtures, name='mus', trainable = False,\
+            mus = layers.Dense(self.config.num_mixes, name='mus', trainable = False,\
                 kernel_initializer = 'ones', bias_initializer = 'zeros')(mus)
         else:
-            mus = layers.Dense(self.config.num_mixtures, name='mus')(x)
+            mus = layers.Dense(self.config.num_mixes, name='mus')(x)
 
         #std must be greater than 0, #try exp, softplus, or elu + 1
-        sigmas = layers.Dense(self.config.num_mixtures, activation=elu_plus, name='sigmas')(x)
+        sigmas = layers.Dense(self.config.num_mixes, activation=elu_plus, name='sigmas')(x)
         #mixture coefficients must sum to 1, therefore use softmax
-        pis = layers.Dense(self.config.num_mixtures, activation='softmax', name='pis')(x)
+        pis = layers.Dense(self.config.num_mixes, activation='softmax', name='pis')(x)
         
         mdn_out = layers.Concatenate(name='outputs')([mus,sigmas,pis])
         return mdn_out
@@ -82,7 +89,21 @@ class MDN(Network):
 
         self.hist['epochs'].append(epochs_arr)
         self.hist['iterations'].append(epochs_arr*iterations)
+
         self.hist['train_loss'].append(History.history['loss'])
+        self.hist['train_bias'].append(History.history['bias'])
+        self.hist['train_stdev'].append(History.history['stdev'])
+        self.hist['train_MAD'].append(History.history['MAD'])
+        self.hist['train_outliers'].append(History.history['outliers'])      
+        self.hist['train_bias_MAD'].append(History.history['bias_MAD'])
+        
         self.hist['test_loss'].append(History.history['val_loss'])
+        self.hist['test_bias'].append(History.history['val_bias'])
+        self.hist['test_stdev'].append(History.history['val_stdev'])
+        self.hist['test_MAD'].append(History.history['val_MAD'])
+        self.hist['test_outliers'].append(History.history['val_outliers'])
+        self.hist['test_bias_MAD'].append(History.history['val_bias_MAD'])
 
         self.curr_epoch += epochs
+        
+        wandb.finish()
