@@ -22,6 +22,8 @@ class MDN_AE(AutoEncoder):
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
+        self.config.fc_depth = 3
+        self.config.fc_width = 256
         self.config.num_mixes = 2
         self.config.single_mean = False
         self.config.num_classes = 196
@@ -75,11 +77,11 @@ class MDN_AE(AutoEncoder):
     def regressor(self,z):
         y = layers.Flatten()(z)
         
-        y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dropout(self.config.dropout)(y)
-        y = layers.Dense(256, activation = 'relu')(y)
-        y = layers.Dropout(self.config.dropout)(y)
-        y = layers.Dense(128, activation = 'relu')(y)
+        for i in range(self.config.fc_depth-1):
+            y = layers.Dense(self.config.fc_width, activation = 'relu')(y)
+            y = layers.Dropout(self.config.dropout)(y)
+
+        y = layers.Dense(self.config.fc_width, activation = 'relu')(y)
     
         if self.config.single_mean:
             mus = layers.Dense(1, name='mu')(y)

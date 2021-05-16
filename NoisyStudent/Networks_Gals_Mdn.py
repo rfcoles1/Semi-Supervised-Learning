@@ -23,6 +23,8 @@ class MDN(Network):
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
+        self.config.fc_depth = 3
+        self.config.fc_width = 256
         self.config.num_mixes = 2 
         self.config.single_mean = False
         self.config.num_classes = 196
@@ -54,12 +56,12 @@ class MDN(Network):
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
 
-        x = layers.Dense(512, activation = 'relu')(x)
-        x = layers.Dropout(self.config.dropout)(x)
-        x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dropout(self.config.dropout)(x)
-        x = layers.Dense(128, activation = 'relu', name='latent')(x)
-        
+        for i in range(self.config.fc_depth-1):
+            x = layers.Dense(self.config.fc_width, activation = 'relu')(x)
+            x = layers.Dropout(self.config.dropout(x)
+
+        x = layers.Dense(self.config.fc_width, activation = 'relu')(x)
+
         #if only one mean is desired, output one value then expand it using an identity layer
         if self.config.single_mean:
             mus = layers.Dense(1, name='mu')(x)

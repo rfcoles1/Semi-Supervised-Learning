@@ -22,7 +22,8 @@ class Regressor(Network):
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
-
+        self.config.fc_depth = 3
+        self.config.fc_width = 256
 
     def compile(self):
         inp = layers.Input(self.input_shape)
@@ -45,12 +46,11 @@ class Regressor(Network):
         x = base_model(x, training=True)
         x = layers.GlobalAveragePooling2D()(x)
 
-        x = layers.Dense(512, activation = 'relu')(x)
-        x = layers.Dropout(self.config.dropout)(x)
-        x = layers.Dense(256, activation = 'relu')(x)
-        x = layers.Dropout(self.config.dropout)(x)
-        x = layers.Dense(128, activation = 'relu')(x)
-
+        for i in range(self.config.fc_depth-1):
+            x = layers.Dense(self.config.fc_width, activation = 'relu')(x)
+            x = layers.Dropout(self.config.dropout)(x)
+        
+        x = layers.Dense(self.config.fc_width, activation = 'relu')(x)
         x = layers.Dense(1)(x)
         return x
     

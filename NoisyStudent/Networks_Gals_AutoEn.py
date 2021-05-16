@@ -22,6 +22,8 @@ class Regressor_AE(AutoEncoder):
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
+        self.config.fc_depth = 3
+        self.config.fc_width = 256
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -47,7 +49,8 @@ class Regressor_AE(AutoEncoder):
             loss_weights=[1,1],\
             metrics={'regressor': [bias, stdev, MAD, outliers, bias_MAD]})
 
-        self.callbacks = [WandbCallback()]
+        self.callbacks = []
+        #self.callbacks = [WandbCallback()]
     
     def encoder(self, y):
         self.base_model = tf.keras.applications.ResNet50(weights=None,\
@@ -66,12 +69,11 @@ class Regressor_AE(AutoEncoder):
     def regressor(self, z):
         y = layers.Flatten()(z)
 
-        y = layers.Dense(512, activation = 'relu')(y)
-        y = layers.Dropout(self.config.dropout)(y)
-        y = layers.Dense(256, activation = 'relu')(y)
-        y = layers.Dropout(self.config.dropout)(y)
-        y = layers.Dense(128, activation = 'relu')(y)
-        
+        for i in range(self.config.fc_depth-1):
+            y = layers.Dense(self.config.fc_width, activation = 'relu')(y)
+            y = layers.Dropout(self.config.dropout)(y)
+
+        y = layers.Dense(self.config.fc_width, activation = 'relu')(y)
         y = layers.Dense(1)(y)
         return y
     
