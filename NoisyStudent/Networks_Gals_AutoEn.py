@@ -15,7 +15,7 @@ class Regressor_AE(AutoEncoder):
        
         self.input_shape = input_shape
 
-        run = wandb.init(project='NoisyStudent', entity='rfcoles')
+        run = wandb.init(project='NoisyStudent_AutoEnc', entity='rfcoles')
 
         self.config = wandb.config
         self.config.model = "AutoEnc_Regressor"
