@@ -57,9 +57,7 @@ class AutoEncoder():
         self.curr_epoch = 0
 
     def predict(self, x_test):
-        preds = self.Net.predict(x_test,
-                        batch_size=self.batch_size,
-                        verbose=0) 
+        preds = self.Net.predict(x_test)
         return preds
    
     def evaluate(self, x_test, y_test):

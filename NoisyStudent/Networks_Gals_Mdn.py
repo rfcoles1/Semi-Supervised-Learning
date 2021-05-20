@@ -58,7 +58,7 @@ class MDN(Network):
 
         for i in range(self.config.fc_depth-1):
             x = layers.Dense(self.config.fc_width, activation = 'relu')(x)
-            x = layers.Dropout(self.config.dropout(x)
+            x = layers.Dropout(self.config.dropout)(x)
 
         x = layers.Dense(self.config.fc_width, activation = 'relu')(x)
 
