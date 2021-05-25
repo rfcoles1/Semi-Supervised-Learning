@@ -22,6 +22,7 @@ class Regressor(Network):
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
+        self.config.encoder = "Resnet50"
         self.config.fc_depth = 3
         self.config.fc_width = 256
 

@@ -22,8 +22,10 @@ class Regressor_AE(AutoEncoder):
         self.config.learning_rate = 1e-4
         self.config.batch_size = 64
         self.config.dropout = 0
+        self.config.encoder = "Resnet50"
         self.config.fc_depth = 3
         self.config.fc_width = 256
+        self.config.dec_loss_weight = 0.1
 
     def compile(self):
         Enc_inp = layers.Input(self.input_shape, name='encoder_input')
@@ -46,7 +48,7 @@ class Regressor_AE(AutoEncoder):
         optimizer = keras.optimizers.Adam(lr=self.config.learning_rate)
         self.Net.compile(optimizer=optimizer, \
             loss={'regressor': tf.keras.losses.MSE, 'decoder': tf.keras.losses.MSE},\
-            loss_weights=[1,1],\
+            loss_weights=[1,self.config.dec_loss_weight],\
             metrics={'regressor': [bias, stdev, MAD, outliers, bias_MAD]})
 
         self.callbacks = []
