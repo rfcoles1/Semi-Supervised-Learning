@@ -14,9 +14,12 @@ seed = 0
 np.random.seed(seed)
 
 
+def trim_channels(data):
+    return data[:,:,:,1:4]
+
 def class_encoder(data, n_bins, y_min=0, y_max=1):
-    #assume data is normalize to be between 0 and 1
-    bins = np.linspace(y_min,y_max,n_bins)
+    #assume labels are normalize to be between 0 and 1
+    bins = np.linspace(y_min,y_max,n_bins,endpoint=False)
     digitized = np.digitize(data,bins)
     return digitized, bins
 
@@ -29,12 +32,13 @@ def get_new_labels(x_test, pred, threshold=0):
         idx = np.where(maxval>threshold)
         return x_test[idx], maxind[idx]
 
+
+
 def load_test():
     try:
         img, z, _, _, _ = pickle.load(open("../Data/data_2500.pickle","rb"))
         out_size = 1
         return img, z, np.shape(img[0]), out_size 
-    
     except:
         print("Could not load galaxy data")
 
@@ -46,7 +50,6 @@ def load_full(balanced=True):
             bins = 20
             bin_amount = int(len(z)/bins)
             
-
             idx = [i for i, z in enumerate(z) if z > 3.5]
             img = np.delete(img, idx,axis=0)
             z = np.delete(z, idx)
@@ -76,7 +79,6 @@ def load_full(balanced=True):
             z = np.array(z)
       
         return img, z, np.shape(img[0]), out_size 
-        
     except:
         print("Could not load galaxy data")
 
@@ -110,14 +112,12 @@ class Scaler():
             x = (x-self.x_min[0])/(self.x_max[0]-self.x_min[0])
         return x
 
-    def arcsinh(self, x):
-        return np.arcsinh(x)
-
     def minmax_z(self,y):
         self.y_min = np.min(y)
         self.y_max = np.max(y)
         y = (y-self.y_min)/(self.y_max-self.y_min)
         return y
+
 
 class Loader():
     def __init__(self, test_per, dat, balanced=False):
@@ -131,7 +131,7 @@ class Loader():
 
         self.dims = self.shape[-1]
         self.scaler = Scaler(self.dims)
-        #x_scaled = self.scaler.arcsinh(x)
+        #x_scaled = np.arcsinh(x)
         #x_scaled = self.scaler.minmax_img(x_scaled)
         y_scaled = self.scaler.minmax_z(y)
 
@@ -143,8 +143,6 @@ class Loader():
 
     def reset(self):
         self.percentage_returned = self.test_per
-        self.x_returned = np.array([])#np.empty_like(self.x_train)
-        self.y_returned = np.array([])#np.empty_like(self.y_train)
         self.x_stored = np.copy(self.x_train)
         self.y_stored = np.copy(self.y_train)
 
@@ -152,7 +150,6 @@ class Loader():
         if self.percentage_returned + train_per > 1:
             train_per = 1 - self.percentage_returned
             print('Only have train_per %.2f%% data left available' %(100*train_per))
-      
         if train_per < 0.0:
             print('No data remaining')
             return 
@@ -160,11 +157,11 @@ class Loader():
         scaled_train_per = train_per/(1.0 - self.percentage_returned)
 
         x_train, self.x_stored, y_train, self.y_stored = \
-            train_test_split(self.x_stored, self.y_stored, test_size=(1-scaled_train_per), random_state=seed)
+            train_test_split(self.x_stored, self.y_stored,\
+                test_size=(1-scaled_train_per), random_state=seed)
         
         self.percentage_returned += train_per
         print('%.2f%% of the data has been used' %(100*self.percentage_returned))
-
         return x_train, y_train
 
     def get_full_train(self):

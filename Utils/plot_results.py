@@ -75,7 +75,7 @@ def plot_lupton(img):
     r = img[:,:,2:3]
     i = img[:,:,3:4]
 
-    rgb = make_lupton_rgb(i,r,g)
+    rgb = make_lupton_rgb(i,r,g, Q=10, stretch=0.5)
 
     plt.axis('off')
     plt.imshow(rgb)
