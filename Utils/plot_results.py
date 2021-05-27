@@ -60,10 +60,18 @@ def _cols_to_channels(cols):
             channels.append(4)
     return channels
 
-def plot_colour(img, r=1,g=2,b=3):
+def plot_colour(img, r=1,g=2,b=3, normed=True):
     channel1 = img[:,:,r:r+1]
     channel2 = img[:,:,g:g+1]
     channel3 = img[:,:,b:b+1]
+
+    if normed:
+        mn = np.min([channel1, channel2, channel3])
+        mx = np.max([channel1, channel2, channel3])
+
+        channel1 = (channel1 - mn) / (mx - mn)
+        channel2 = (channel2 - mn) / (mx - mn)
+        channel3 = (channel3 - mn) / (mx - mn)
 
     image = np.concatenate([channel1, channel2, channel3], axis=2)
 
@@ -94,7 +102,7 @@ def plot_collection(imgs):
             plot_colour(imgs[i*cols+j])
 
  
-def compare_images(imgs1, imgs2):
+def compare_images(imgs1, imgs2, normed=True):
     n = len(imgs1)
     rows = int(np.ceil(n/3))
     cols = 3
@@ -107,10 +115,10 @@ def compare_images(imgs1, imgs2):
     for i in range(rows):
         for j in range(cols):
             ax1 = fig.add_subplot(grid1[i,j])
-            plot_colour(imgs1[i*cols+j])
+            plot_colour(imgs1[i*cols+j],normed=normed)
 
             ax2 = fig.add_subplot(grid2[i,j])
-            plot_colour(imgs2[i*cols+j])
+            plot_colour(imgs2[i*cols+j],normed=normed)
     
 
 def show_aug(img, Augmenter, resize=True, size=32):
