@@ -14,8 +14,9 @@ seed = 0
 np.random.seed(seed)
 
 
-def trim_channels(data):
-    return data[:,:,:,1:4]
+def trim_channels(data,channels):
+    #channels in the format [1,2,3]
+    return data[:,:,:,channels]
 
 def class_encoder(data, n_bins, y_min=0, y_max=1):
     #assume labels are normalize to be between 0 and 1
