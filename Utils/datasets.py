@@ -4,6 +4,7 @@ warnings.filterwarnings('ignore')
 import sys
 import numpy as np
 import pickle
+import copy
 
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
@@ -17,6 +18,12 @@ np.random.seed(seed)
 def trim_channels(data,channels):
     #channels in the format [1,2,3]
     return data[:,:,:,channels]
+
+def zero_channels(data,channels):
+    #channels in the format [1,2,3]
+    data_tmp = copy.deepcopy(data)
+    data_tmp[:,:,:,channels] = 0
+    return data_tmp
 
 def class_encoder(data, n_bins, y_min=0, y_max=1):
     #assume labels are normalize to be between 0 and 1
