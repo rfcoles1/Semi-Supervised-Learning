@@ -11,9 +11,17 @@ from sklearn.utils import shuffle
 from skimage import transform
 from scipy.ndimage.filters import gaussian_filter
 
+from astropy.cosmology import FlatLambdaCDM
+import astropy.units as u
+
 seed = 0
 np.random.seed(seed)
 
+def get_dists(z, err_per=0):
+    model = FlatLambdaCDM(H0=70*u.km/u.s/u.Mpc, Tcmb0=2.725*u.K, Om0=0.3)
+    dist = model.angular_diameter_distance(z).value
+    error = (err_per*dist)*np.random.normal(0,1,np.shape(z))
+    return dist+error
 
 def trim_channels(data,channels):
     #channels in the format [1,2,3]
