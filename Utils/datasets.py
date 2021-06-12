@@ -11,17 +11,11 @@ from sklearn.utils import shuffle
 from skimage import transform
 from scipy.ndimage.filters import gaussian_filter
 
-from astropy.cosmology import FlatLambdaCDM
+from astropy.cosmology import FlatLambdaCDM, w0waCDM
 import astropy.units as u
 
 seed = 0
 np.random.seed(seed)
-
-def get_dists(z, err_per=0):
-    model = FlatLambdaCDM(H0=70*u.km/u.s/u.Mpc, Tcmb0=2.725*u.K, Om0=0.3)
-    dist = model.angular_diameter_distance(z).value
-    error = (err_per*dist)*np.random.normal(0,1,np.shape(z))
-    return dist+error
 
 def trim_channels(data,channels):
     #channels in the format [1,2,3]
@@ -58,7 +52,7 @@ def load_test():
     except:
         print("Could not load galaxy data")
 
-def load_full(balanced=True):
+def load_full():
     try:
         img, z, _, _, _ = pickle.load(open("../Data/data_full.pickle","rb"))
         out_size = 1
@@ -107,8 +101,21 @@ def rebalance_dataset(img, z, z_min, z_max, bins=20):
     return img, z    
 
 
+def get_dist_flat(z, err_per=0):
+    model = FlatLambdaCDM(H0=73*u.km/u.s/u.Mpc, Om0 = 0.3)
+    dist = model.angular_diameter_distance(z).value
+    error = (err_per*dist)*np.random.normal(0,1,np.shape(z))
+    return dist+error
+
+def get_dist_w0(z, err_per=0):
+    model = w0waCDM(H0=68*u.km/u.s/u.Mpc, Om0=0.28, Ode0=0.73, w0=-0.9, wa=0.2)
+    dist = model.angular_diameter_distance(z).value
+    error = (err_per*dist)*np.random.normal(0,1,np.shape(z))
+    return dist+error
+
+
 class Loader():
-    def __init__(self, test_per, dat, balanced=False):
+    def __init__(self, test_per, dat, balanced=False, dist=None):
         self.datasets = {
             "load_test": load_test(),
             "load_full": load_full(),
@@ -119,8 +126,16 @@ class Loader():
         self.dims = self.shape[-1]
         self.scaler = Scaler(self.dims)
         #x_scaled = np.arcsinh(x)
-        #x_scaled = self.scaler.minmax_img(x_scaled)
-        y_scaled = self.scaler.minmax_z(y)
+        #x_scaled = self.scaler.minmax_x(x_scaled)
+
+        if dist=='Flat':
+            self.redshifts = y
+            y = get_dist_flat(y,0.07)
+        if dist=='w0':
+            self.redshifts = y
+            y = get_dist_w0(y,0.07)
+
+        y_scaled = self.scaler.minmax_y(y)
 
         self.test_per = test_per
         self.x_train, self.x_test, self.y_train, self.y_test = \
@@ -175,7 +190,7 @@ class Scaler():
         self.y_min = 0
         self.y_max = 0
 
-    def minmax_img(self, x, bychannels=True):
+    def minmax_x(self, x, bychannels=True):
         if bychannels:
             for i in range(self.dims):
                 self.x_min[i] = np.min(x[:,:,:,i])
@@ -187,7 +202,7 @@ class Scaler():
             x = (x-self.x_min[0])/(self.x_max[0]-self.x_min[0])
         return x
 
-    def minmax_z(self,y):
+    def minmax_y(self,y):
         self.y_min = np.min(y)
         self.y_max = np.max(y)
         y = (y-self.y_min)/(self.y_max-self.y_min)
