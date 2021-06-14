@@ -115,7 +115,7 @@ def get_dist_w0(z, err_per=0):
 
 
 class Loader():
-    def __init__(self, test_per, dat, balanced=False, dist=None):
+    def __init__(self, test_per, dat, balanced=False, dist=None,err=0.07):
         self.datasets = {
             "load_test": load_test(),
             "load_full": load_full(),
@@ -130,10 +130,10 @@ class Loader():
 
         if dist=='Flat':
             self.redshifts = y
-            y = get_dist_flat(y,0.07)
+            y = get_dist_flat(y,err)
         if dist=='w0':
             self.redshifts = y
-            y = get_dist_w0(y,0.07)
+            y = get_dist_w0(y,err)
 
         y_scaled = self.scaler.minmax_y(y)
 
