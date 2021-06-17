@@ -38,8 +38,8 @@ class Regressor(Network):
             loss=tf.keras.losses.MSE,\
             metrics = [bias, stdev, MAD, outliers, bias_MAD])
 
-        self.callbacks = []
-        #self.callbacks = [WandbCallback()]
+        #self.callbacks = []
+        self.callbacks = [WandbCallback()]
 
 
     def regressor(self, x, msk):
@@ -88,3 +88,8 @@ class Regressor(Network):
         self.curr_epoch += epochs
 
         wandb.finish()
+
+    def predict(self, x_train, x_mask):
+        preds = self.Net.predict([x_train, x_mask], \
+            batch_size=self.config.batch_size)
+        return preds
