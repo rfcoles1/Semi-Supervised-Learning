@@ -27,6 +27,19 @@ def zero_channels(data,channels):
     data_tmp[:,:,:,channels] = 0
     return data_tmp
 
+def normal_noise_channels(data,channels):
+    data_tmp = copy.deepcopy(data)
+    for i in channels:
+        data_tmp[:,:,:,i] = np.random.normal(size=np.shape(data[:,:,:,i]))
+    return data_tmp  
+
+def uniform_noise_channels(data,channels):
+    data_tmp = copy.deepcopy(data)
+    for i in channels:
+        data_tmp[:,:,:,i] = np.random.uniform(size=np.shape(data[:,:,:,i]))
+    return data_tmp  
+
+
 def class_encoder(data, n_bins, y_min=0, y_max=1):
     #assume labels are normalize to be between 0 and 1
     bins = np.linspace(y_min,y_max,n_bins,endpoint=False)
