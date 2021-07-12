@@ -163,12 +163,14 @@ def PConv_ResNet50(input_tensor=None,input_shape=None,**kwargs):
     img_input = layers.Input(shape=input_shape)
     mask_input = layers.Input(shape=input_shape)
     
-    x = layers.ZeroPadding2D(padding=(3, 3), name='conv1_pad')(img_input)
-    msk = layers.ZeroPadding2D(padding=(3,3), name='msk1_pad')(mask_input)
-    
+    #x = layers.ZeroPadding2D(padding=(3, 3), name='conv1_pad')(img_input)
+    #msk = layers.ZeroPadding2D(padding=(3,3), name='msk1_pad')(mask_input)
+    x = img_input
+    msk = mask_input
+
     x,msk = PConv2D(64, (7, 7),
                       strides=(2, 2),
-                      padding='valid',
+                      #padding='valid',
                       kernel_initializer='he_normal',
                       name='conv1')([x,msk])
     
@@ -205,14 +207,6 @@ def PConv_ResNet50(input_tensor=None,input_shape=None,**kwargs):
     model = models.Model(inputs, x, name='pconv_resnet50')
 
     return model
-
-
-
-
-
-
-
-
 
 def identity_block(input_tensor, mask_tensor, kernel_size, filters, stage, block):
     filters1, filters2, filters3 = filters
